@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Algorithmic Trading Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📈</text></svg>">
+</head>
+<body>
+    <div class="container">
+        <!-- Header Section -->
+        <div class="header">
+            <h1>📈 Algorithmic Trading Dashboard</h1>
+            <p>Technical Analysis & Entry Point Scanner for 3-4 Month Swing Trading</p>
+            <div class="header-stats">
+                <span class="stat-item">
+                    <strong>Target Return:</strong> 25-30%
+                </span>
+                <span class="stat-item">
+                    <strong>Holding Period:</strong> 3-4 Months
+                </span>
+                <span class="stat-item">
+                    <strong>Max Risk:</strong> 2% per trade
+                </span>
+            </div>
+        </div>
+        
+        <!-- Instructions Section -->
+        <div class="instructions">
+            <h3>📋 How to Use:</h3>
+            <p>Select from the 10 quick pick tickers below or enter any stock symbol to get comprehensive technical analysis with entry signals, stop loss, profit targets, and entry recommendations.</p>
+        </div>
+        
+        <!-- Enhanced Stock Symbol Input Section -->
+        <div class="symbol-input-section">
+            <!-- Quick Select Tickers (10 buttons) -->
+            <div class="quick-select-container">
+                <h3>🎯 Quick Select Tickers (Top 10)</h3>
+                <div class="quick-symbols-grid">
+                    <button class="quick-symbol-btn featured" onclick="quickAnalyze('AAPL')">
+                        <span class="symbol">AAPL</span>
+                        <span class="company">Apple</span>
+                    </button>
+                    <button class="quick-symbol-btn featured" onclick="quickAnalyze('GOOGL')">
+                        <span class="symbol">GOOGL</span>
+                        <span class="company">Alphabet</span>
+                    </button>
+                    <button class="quick-symbol-btn featured" onclick="quickAnalyze('MSFT')">
+                        <span class="symbol">MSFT</span>
+                        <span class="company">Microsoft</span>
+                    </button>
+                    <button class="quick-symbol-btn featured" onclick="quickAnalyze('TSLA')">
+                        <span class="symbol">TSLA</span>
+                        <span class="company">Tesla</span>
+                    </button>
+                    <button class="quick-symbol-btn featured" onclick="quickAnalyze('NVDA')">
+                        <span class="symbol">NVDA</span>
+                        <span class="company">NVIDIA</span>
+                    </button>
+                    <button class="quick-symbol-btn featured" onclick="quickAnalyze('AMZN')">
+                        <span class="symbol">AMZN</span>
+                        <span class="company">Amazon</span>
+                    </button>
+                    <button class="quick-symbol-btn featured" onclick="quickAnalyze('META')">
+                        <span class="symbol">META</span>
+                        <span class="company">Meta</span>
+                    </button>
+                    <button class="quick-symbol-btn featured" onclick="quickAnalyze('AMD')">
+                        <span class="symbol">AMD</span>
+                        <span class="company">AMD</span>
+                    </button>
+                    <button class="quick-symbol-btn featured" onclick="quickAnalyze('NFLX')">
+                        <span class="symbol">NFLX</span>
+                        <span class="company">Netflix</span>
+                    </button>
+                    <button class="quick-symbol-btn featured" onclick="quickAnalyze('SPY')">
+                        <span class="symbol">SPY</span>
+                        <span class="company">S&P 500 ETF</span>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Custom Symbol Input -->
+            <div class="custom-input-container">
+                <h3>💻 Or Enter Any Symbol</h3>
+                <div class="input-container">
+                    <input type="text" id="symbolInput" placeholder="Enter symbol (e.g., AAPL, TSLA, MSFT)" maxlength="10">
+                    <button id="analyzeBtn" onclick="analyzeInputSymbol()">Analyze Stock</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Loading Message -->
+        <div id="loadingMessage" class="loading" style="display: none;">
+            <div class="loading-spinner"></div>
+            <p>Analyzing technical indicators and generating complete trading plan... Please wait ⏳</p>
+        </div>
+        
+        <!-- Analysis Results Container -->
+        <div id="analysisResult" class="analysis-result" style="display: none;">
+            <!-- Analysis results will be displayed here dynamically -->
+        </div>
+        
+        <!-- Error Message Container -->
+        <div id="errorMessage" class="error-message" style="display: none;">
+            <!-- Error messages will be displayed here -->
+        </div>
+        
+        <!-- Footer Information -->
+        <div class="footer">
+            <div class="disclaimer">
+                <h4>⚠️ Risk Disclaimer:</h4>
+                <p>This tool provides technical analysis for educational purposes only. Not financial advice. 
+                   Always conduct your own research and consider consulting a financial advisor before making investment decisions. 
+                   Trading involves risk of loss.</p>
+            </div>
+            <div class="footer-info">
+                <p>Data provided by Yahoo Finance | Analysis updated in real-time</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- JavaScript -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script>
+        // Global variables
+        var currentSymbol = null;
+        
+        // Main analysis function
+        function analyzeSymbol(symbol) {
+            console.log('Analyzing symbol:', symbol);
+            currentSymbol = symbol;
+            
+            showLoading();
+            hideResults();
+            hideError();
+            
+            fetch('/analyze/' + symbol)
+                .then(function(response) {
+                    if (!response.ok) {
+                        throw new Error('HTTP ' + response.status + ': ' + response.statusText);
+                    }
+                    return response.json();
+                })
+                .then(function(data) {
+                    console.log('Analysis data received for', symbol);
+                    if (data.error) {
+                        showError(data.error);
+                    } else {
+                        displayResults(data);
+                    }
+                })
+                .catch(function(error) {
+                    console.error('Analysis error for', symbol, ':', error);
+                    if (error.message.includes('404')) {
+                        showError('Stock symbol "' + symbol + '" not found. Please check the symbol and try again.');
+                    } else if (error.message.includes('500')) {
+                        showError('Server error analyzing "' + symbol + '". Please try again later.');
+                    } else {
+                        showError('Error analyzing "' + symbol + '": ' + error.message);
+                    }
+                })
+                .finally(function() {
+                    hideLoading();
+                });
+        }
+        
+        // Input field functions
+        function analyzeInputSymbol() {
+            var input = document.getElementById('symbolInput');
+            var symbol = input.value.trim().toUpperCase();
+            
+            if (!symbol) {
+                showError('Please enter a stock symbol');
+                return;
+            }
+            
+            if (symbol.length > 10) {
+                showError('Symbol too long. Please enter a valid stock symbol');
+                return;
+            }
+            
+            analyzeSymbol(symbol);
+        }
+        
+        function quickAnalyze(symbol) {
+            document.getElementById('symbolInput').value = symbol;
+            analyzeSymbol(symbol);
+            
+            // Add visual feedback to the clicked button
+            document.querySelectorAll('.quick-symbol-btn').forEach(function(btn) {
+                btn.classList.remove('active');
+            });
+            event.target.closest('.quick-symbol-btn').classList.add('active');
+        }
+        
+        // Display results function
+        function displayResults(data) {
+            var resultDiv = document.getElementById('analysisResult');
+            var signalInfo = getSignalInfo(data);
+            var scoreClass = getScoreClass(data.signal_score);
+            
+            var resultHTML = 
+                '<div class="result-header">' +
+                    '<div>' +
+                        '<h2 class="symbol-title">' + data.symbol + '</h2>' +
+                        '<p>Price: $' + data.current_price.toFixed(2) + ' | Date: ' + data.date + '</p>' +
+                    '</div>' +
+                    '<div style="display: flex; align-items: center;">' +
+                        '<div class="score-circle ' + scoreClass + '">' +
+                            data.signal_score + '/20' +
+                        '</div>' +
+                        '<div class="signal-badge ' + signalInfo.signalClass + '">' +
+                            signalInfo.signalText +
+                        '</div>' +
+                    '</div>' +
+                '</div>';
+            
+            // Add technical metrics
+            if (data.technical_data) {
+                resultHTML += '<div class="metrics-grid">' + generateMetricsHTML(data) + '</div>';
+            }
+            
+            // Add score breakdown
+            if (data.score_breakdown) {
+                resultHTML += generateScoreBreakdownHTML(data);
+            }
+            
+            // Add trading plan for BUY signals
+            if (data.trading_plan && data.entry_signal) {
+                resultHTML += generateTradingPlanHTML(data);
+            }
+            
+            // Add entry recommendations for HOLD/WAIT signals
+            if (!data.entry_signal && data.valuation_metrics) {
+                resultHTML += generateEntryRecommendationsHTML(data);
+            }
+            
+            // Add signals list
+            if (data.signals && data.signals.length > 0) {
+                resultHTML += generateSignalsHTML(data.signals);
+            }
+            
+            resultDiv.innerHTML = resultHTML;
+            resultDiv.style.display = 'block';
+        }
+        
+        function generateMetricsHTML(data) {
+            var tech = data.technical_data;
+            var valuation = data.valuation_metrics;
+            
+            return '<div class="metric-card">' +
+                    '<div class="metric-label">RSI (14)</div>' +
+                    '<div class="metric-value">' + tech.RSI.toFixed(1) + '</div>' +
+                '</div>' +
+                '<div class="metric-card">' +
+                    '<div class="metric-label">MACD</div>' +
+                    '<div class="metric-value">' + tech.MACD.toFixed(3) + '</div>' +
+                '</div>' +
+                '<div class="metric-card">' +
+                    '<div class="metric-label">ADX</div>' +
+                    '<div class="metric-value">' + tech.ADX.toFixed(1) + '</div>' +
+                '</div>' +
+                '<div class="metric-card">' +
+                    '<div class="metric-label">Williams %R</div>' +
+                    '<div class="metric-value">' + tech.Williams_R.toFixed(1) + '</div>' +
+                '</div>' +
+                '<div class="metric-card">' +
+                    '<div class="metric-label">Money Flow Index</div>' +
+                    '<div class="metric-value">' + tech.MFI.toFixed(1) + '</div>' +
+                '</div>' +
+                '<div class="metric-card">' +
+                    '<div class="metric-label">vs SMA 200</div>' +
+                    '<div class="metric-value">' + valuation.distance_from_sma200.toFixed(1) + '%</div>' +
+                '</div>' +
+                '<div class="metric-card">' +
+                    '<div class="metric-label">52W Position</div>' +
+                    '<div class="metric-value">' + valuation.position_52w.toFixed(1) + '%</div>' +
+                '</div>' +
+                '<div class="metric-card">' +
+                    '<div class="metric-label">Volatility</div>' +
+                    '<div class="metric-value">' + valuation.volatility_20d.toFixed(1) + '%</div>' +
+                '</div>';
+        }
+        
+        function generateScoreBreakdownHTML(data) {
+            var breakdown = data.score_breakdown;
+            var summary = data.recommendation_summary;
+            
+            var html = '<div class="score-breakdown">' +
+                '<h4>📊 Score Breakdown (' + data.signal_score + '/20 points):</h4>' +
+                '<div class="breakdown-grid">' +
+                    '<div class="breakdown-item">' +
+                        '<span class="breakdown-label">Base Signals:</span>' +
+                        '<span class="breakdown-value">' + breakdown.base_score + '</span>' +
+                    '</div>' +
+                    '<div class="breakdown-item">' +
+                        '<span class="breakdown-label">Trend:</span>' +
+                        '<span class="breakdown-value">' + breakdown.trend_score + '</span>' +
+                    '</div>' +
+                    '<div class="breakdown-item">' +
+                        '<span class="breakdown-label">Momentum:</span>' +
+                        '<span class="breakdown-value">' + breakdown.momentum_score + '</span>' +
+                    '</div>' +
+                    '<div class="breakdown-item">' +
+                        '<span class="breakdown-label">Volume:</span>' +
+                        '<span class="breakdown-value">' + breakdown.volume_score + '</span>' +
+                    '</div>' +
+                    '<div class="breakdown-item">' +
+                        '<span class="breakdown-label">Valuation:</span>' +
+                        '<span class="breakdown-value">' + breakdown.valuation_penalty + '</span>' +
+                    '</div>' +
+                    '<div class="breakdown-item total">' +
+                        '<span class="breakdown-label">Total:</span>' +
+                        '<span class="breakdown-value">' + breakdown.total_score + '</span>' +
+                    '</div>' +
+                '</div>' +
+            '</div>';
+            
+            // Add recommendation summary for non-BUY signals
+            if (summary && summary.type !== 'BUY') {
+                html += generateRecommendationSummaryHTML(summary);
+            }
+            
+            return html;
+        }
+        
+        function generateRecommendationSummaryHTML(summary) {
+            var typeClass = summary.type.toLowerCase() + '-summary';
+            var icon = summary.type === 'MONITOR' ? '⚠️' : '❌';
+            
+            var html = '<div class="recommendation-summary ' + typeClass + '">' +
+                '<h4>' + icon + ' ' + summary.title + '</h4>' +
+                '<p class="summary-text">' + summary.summary + '</p>';
+            
+            if (summary.key_points && summary.key_points.length > 0) {
+                html += '<div class="key-issues">' +
+                    '<h5>Key Issues:</h5>' +
+                    '<ul>';
+                summary.key_points.forEach(function(point) {
+                    html += '<li>' + point + '</li>';
+                });
+                html += '</ul></div>';
+            }
+            
+            if (summary.what_to_watch && summary.what_to_watch.length > 0) {
+                html += '<div class="what-to-watch">' +
+                    '<h5>What to Watch:</h5>' +
+                    '<ul>';
+                summary.what_to_watch.forEach(function(item) {
+                    html += '<li>' + item + '</li>';
+                });
+                html += '</ul></div>';
+            }
+            
+            html += '</div>';
+            return html;
+        }
+        
+        function generateTradingPlanHTML(data) {
+            var plan = data.trading_plan;
+            
+            return '<div class="trading-plan-section">' +
+                '<h3 class="plan-title">📋 Trading Plan (3-4 Month Hold)</h3>' +
+                '<div class="plan-grid">' +
+                    '<div class="plan-card entry-card">' +
+                        '<h4>🎯 Entry Point</h4>' +
+                        '<div class="plan-value">$' + data.current_price.toFixed(2) + '</div>' +
+                        '<div class="plan-note">Current market price</div>' +
+                    '</div>' +
+                    '<div class="plan-card stop-card">' +
+                        '<h4>🛑 Stop Loss</h4>' +
+                        '<div class="plan-value">$' + plan.stop_loss.recommended.toFixed(2) + '</div>' +
+                        '<div class="plan-note">Risk: ' + plan.stop_loss.risk_percent.toFixed(1) + '%</div>' +
+                    '</div>' +
+                    '<div class="plan-card target-card">' +
+                        '<h4>🚀 Primary Target</h4>' +
+                        '<div class="plan-value">$' + plan.exit_targets.Primary_Target.toFixed(2) + '</div>' +
+                        '<div class="plan-note">27.5% gain target</div>' +
+                    '</div>' +
+                    '<div class="plan-card ratio-card">' +
+                        '<h4>⚖️ Risk/Reward</h4>' +
+                        '<div class="plan-value">1:' + plan.risk_reward_ratio.toFixed(1) + '</div>' +
+                        '<div class="plan-note">' + (plan.risk_reward_ratio >= 2 ? 'Good ratio' : 'Consider risk') + '</div>' +
+                    '</div>' +
+                '</div>' +
+                '<div class="profit-targets">' +
+                    '<h4>📈 Partial Profit Targets:</h4>' +
+                    '<div class="targets-grid">' +
+                        '<div class="target-item">' +
+                            '<span class="target-label">Target 1 (15%)</span>' +
+                            '<span class="target-price">$' + plan.exit_targets.Target_1.toFixed(2) + '</span>' +
+                            '<span class="target-action">Sell 1/3</span>' +
+                        '</div>' +
+                        '<div class="target-item">' +
+                            '<span class="target-label">Target 2 (22%)</span>' +
+                            '<span class="target-price">$' + plan.exit_targets.Target_2.toFixed(2) + '</span>' +
+                            '<span class="target-action">Sell 1/3</span>' +
+                        '</div>' +
+                        '<div class="target-item">' +
+                            '<span class="target-label">Target 3 (27.5%)</span>' +
+                            '<span class="target-price">$' + plan.exit_targets.Target_3.toFixed(2) + '</span>' +
+                            '<span class="target-action">Sell Final 1/3</span>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>' +
+            '</div>';
+        }
+        
+        function generateEntryRecommendationsHTML(data) {
+            var currentPrice = data.current_price;
+            var tech = data.technical_data;
+            
+            var entryLevels = [
+                { level: '5% Pullback', price: currentPrice * 0.95, discount: 5 },
+                { level: '10% Pullback', price: currentPrice * 0.90, discount: 10 },
+                { level: 'EMA 50', price: tech.EMA_50, discount: ((currentPrice - tech.EMA_50) / currentPrice * 100) },
+                { level: 'SMA 200', price: tech.SMA_200, discount: ((currentPrice - tech.SMA_200) / currentPrice * 100) }
+            ].filter(function(entry) { return entry.price > 0 && entry.discount > 0; });
+            
+            var signalType = data.signal_score >= 5 ? 'hold-signal' : 'wait-signal';
+            var signalMessage = data.signal_score >= 5 ? '⚠️ Hold/Monitor' : '❌ Wait for Better Setup';
+            
+            var html = '<div class="wait-recommendation ' + signalType + '">' +
+                '<h4>' + signalMessage + '</h4>' +
+                '<div class="suggested-entry-levels">' +
+                    '<h5>💡 Consider Entry At These Levels:</h5>' +
+                    '<div class="entry-levels-grid">';
+            
+            entryLevels.forEach(function(entry) {
+                html += '<div class="entry-level-item">' +
+                    '<div class="level-name">' + entry.level + '</div>' +
+                    '<div class="level-price">$' + entry.price.toFixed(2) + '</div>' +
+                    '<div class="level-discount">' + entry.discount.toFixed(1) + '% below current</div>' +
+                '</div>';
+            });
+            
+            html += '</div></div></div>';
+            return html;
+        }
+        
+        function generateSignalsHTML(signals) {
+            var html = '<div class="signals-section">' +
+                '<h3 class="signals-title">Bullish Signals Detected:</h3>' +
+                '<div class="signals-list">';
+            
+            signals.forEach(function(signal) {
+                html += '<span class="signal-tag">' + signal + '</span>';
+            });
+            
+            html += '</div></div>';
+            return html;
+        }
+        
+        function getSignalInfo(data) {
+            if (data.entry_signal) {
+                return { signalClass: 'signal-buy', signalText: '✅ BUY SIGNAL' };
+            } else if (data.signal_score >= 5) {
+                return { signalClass: 'signal-hold', signalText: '⚠️ HOLD/MONITOR' };
+            } else {
+                return { signalClass: 'signal-wait', signalText: '❌ WAIT' };
+            }
+        }
+        
+        function getScoreClass(score) {
+            if (score >= 12) return 'score-high';
+            if (score >= 8) return 'score-medium';
+            if (score >= 5) return 'score-low';
+            return 'score-very-low';
+        }
+        
+        // Utility functions
+        function showLoading() {
+            var loadingDiv = document.getElementById('loadingMessage');
+            if (loadingDiv) loadingDiv.style.display = 'block';
+        }
+        
+        function hideLoading() {
+            var loadingDiv = document.getElementById('loadingMessage');
+            if (loadingDiv) loadingDiv.style.display = 'none';
+        }
+        
+        function hideResults() {
+            var resultDiv = document.getElementById('analysisResult');
+            if (resultDiv) resultDiv.style.display = 'none';
+        }
+        
+        function showError(message) {
+            var errorDiv = document.getElementById('errorMessage');
+            if (errorDiv) {
+                errorDiv.textContent = message;
+                errorDiv.style.display = 'block';
+            }
+        }
+        
+        function hideError() {
+            var errorDiv = document.getElementById('errorMessage');
+            if (errorDiv) errorDiv.style.display = 'none';
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Dashboard ready with 10 quick select tickers');
+            
+            // Setup input field
+            var input = document.getElementById('symbolInput');
+            if (input) {
+                input.addEventListener('keypress', function(event) {
+                    if (event.key === 'Enter') {
+                        analyzeInputSymbol();
+                    }
+                });
+                
+                input.addEventListener('focus', function() {
+                    input.select();
+                });
+            }
+        });
+        
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'r' || event.key === 'R') {
+                if (currentSymbol) {
+                    analyzeSymbol(currentSymbol);
+                }
+                event.preventDefault();
+            }
+            
+            if (event.key === 'Escape') {
+                hideResults();
+                hideError();
+                var input = document.getElementById('symbolInput');
+                if (input) input.focus();
+            }
+        });
+    </script>
+</body>
+</html>
