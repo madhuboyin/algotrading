@@ -17,9 +17,9 @@ def index():
     print(f"Loading dashboard with {len(tickers)} quick select tickers: {tickers}")
     return render_template('index.html', symbols=tickers)
 
-@app.route('/analyze/<symbol>')
+@app.route('/analyze/<symbol>', methods=['GET', 'POST'])
 def analyze_symbol(symbol):
-    """Analyze a specific stock symbol"""
+    """Analyze a specific stock symbol with optional custom indicators"""
     try:
         # Convert to uppercase and validate basic format
         symbol = symbol.upper().strip()
@@ -38,8 +38,20 @@ def analyze_symbol(symbol):
         
         print(f"Analyzing symbol: {symbol}")
         
+        # Get selected indicators from POST request (if any)
+        selected_indicators = None
+        if request.method == 'POST':
+            data = request.get_json()
+            if data and 'indicators' in data:
+                selected_indicators = data['indicators']
+                print(f"Custom indicators selected: {selected_indicators}")
+        
         # Create analyzer instance
         analyzer = TechnicalAnalyzer(symbol)
+        
+        # Set custom indicators if provided
+        if selected_indicators:
+            analyzer.selected_indicators = selected_indicators
         
         # Check if data was fetched successfully
         if analyzer.data is None:
@@ -59,6 +71,10 @@ def analyze_symbol(symbol):
         if not result or 'symbol' not in result:
             return jsonify({'error': f'Analysis failed for "{symbol}". Unable to calculate technical indicators.'}), 500
         
+        # Add indicators used in analysis
+        if selected_indicators:
+            result['indicators_used'] = selected_indicators
+        
         print(f"Analysis completed successfully for {symbol} - Score: {result.get('signal_score', 'N/A')}")
         return jsonify(result)
     
@@ -77,6 +93,16 @@ def analyze_symbol(symbol):
             return jsonify({'error': 'Network error. Please check your internet connection and try again.'}), 503
         else:
             return jsonify({'error': f'Analysis error for "{symbol}": {str(e)}'}), 500
+
+@app.route('/api/indicators')
+def get_indicators():
+    """Get available indicators configuration"""
+    from indicators_config import get_available_indicators, get_default_indicators
+    
+    return jsonify({
+        'available': get_available_indicators(),
+        'default': get_default_indicators()
+    })
 
 @app.route('/api/tickers')
 def get_tickers():

@@ -34,50 +34,38 @@
         
         <!-- Enhanced Stock Symbol Input Section -->
         <div class="symbol-input-section">
-            <!-- Quick Select Tickers (10 buttons) -->
+            <!-- Quick Select Tickers (Dynamic from tickers.py) -->
             <div class="quick-select-container">
-                <h3>🎯 Quick Select Tickers (Top 10)</h3>
-                <div class="quick-symbols-grid">
-                    <button class="quick-symbol-btn featured" onclick="quickAnalyze('AAPL')">
-                        <span class="symbol">AAPL</span>
-                        <span class="company">Apple</span>
+                <h3>🎯 Quick Select:</h3>
+                <div class="quick-symbols-row" id="quickSelectRow">
+                    <!-- Tickers will be loaded dynamically from tickers.py -->
+                </div>
+            </div>
+            
+            <!-- Indicator Selection Section -->
+            <div class="indicator-selection-container">
+                <h3>📊 Select Technical Indicators</h3>
+                <div class="indicator-toggle-header">
+                    <button class="toggle-indicators-btn" onclick="toggleIndicatorSelection()">
+                        <span id="indicatorToggleText">Customize Indicators</span>
+                        <span id="indicatorToggleIcon">▼</span>
                     </button>
-                    <button class="quick-symbol-btn featured" onclick="quickAnalyze('GOOGL')">
-                        <span class="symbol">GOOGL</span>
-                        <span class="company">Alphabet</span>
-                    </button>
-                    <button class="quick-symbol-btn featured" onclick="quickAnalyze('MSFT')">
-                        <span class="symbol">MSFT</span>
-                        <span class="company">Microsoft</span>
-                    </button>
-                    <button class="quick-symbol-btn featured" onclick="quickAnalyze('TSLA')">
-                        <span class="symbol">TSLA</span>
-                        <span class="company">Tesla</span>
-                    </button>
-                    <button class="quick-symbol-btn featured" onclick="quickAnalyze('NVDA')">
-                        <span class="symbol">NVDA</span>
-                        <span class="company">NVIDIA</span>
-                    </button>
-                    <button class="quick-symbol-btn featured" onclick="quickAnalyze('AMZN')">
-                        <span class="symbol">AMZN</span>
-                        <span class="company">Amazon</span>
-                    </button>
-                    <button class="quick-symbol-btn featured" onclick="quickAnalyze('META')">
-                        <span class="symbol">META</span>
-                        <span class="company">Meta</span>
-                    </button>
-                    <button class="quick-symbol-btn featured" onclick="quickAnalyze('AMD')">
-                        <span class="symbol">AMD</span>
-                        <span class="company">AMD</span>
-                    </button>
-                    <button class="quick-symbol-btn featured" onclick="quickAnalyze('NFLX')">
-                        <span class="symbol">NFLX</span>
-                        <span class="company">Netflix</span>
-                    </button>
-                    <button class="quick-symbol-btn featured" onclick="quickAnalyze('SPY')">
-                        <span class="symbol">SPY</span>
-                        <span class="company">S&P 500 ETF</span>
-                    </button>
+                    <div class="indicator-summary">
+                        <span id="selectedIndicatorCount">12</span> indicators selected
+                    </div>
+                </div>
+                
+                <div class="indicator-selection-panel" id="indicatorSelectionPanel" style="display: none;">
+                    <div class="indicator-controls">
+                        <button class="preset-btn" onclick="loadIndicatorPreset('default')">Default Set</button>
+                        <button class="preset-btn" onclick="loadIndicatorPreset('minimal')">Minimal Set</button>
+                        <button class="preset-btn" onclick="loadIndicatorPreset('advanced')">Advanced Set</button>
+                        <button class="preset-btn" onclick="loadIndicatorPreset('all')">All Indicators</button>
+                    </div>
+                    
+                    <div class="indicator-categories" id="indicatorCategories">
+                        <!-- Indicator categories will be populated by JavaScript -->
+                    </div>
                 </div>
             </div>
             
@@ -126,6 +114,258 @@
     <script>
         // Global variables
         var currentSymbol = null;
+        var quickSelectTickers = [];
+        var selectedIndicators = {};
+        var indicatorConfig = {};
+        
+        // Default indicator configuration
+        const defaultIndicatorConfig = {
+            'Trend Indicators': {
+                'SMA_20': { name: 'Simple Moving Average (20)', description: 'Short-term trend', default: true, required: false },
+                'SMA_50': { name: 'Simple Moving Average (50)', description: 'Medium-term trend', default: true, required: false },
+                'SMA_100': { name: 'Simple Moving Average (100)', description: 'Long-term trend', default: true, required: false },
+                'SMA_200': { name: 'Simple Moving Average (200)', description: 'Major trend', default: true, required: true },
+                'EMA_20': { name: 'Exponential Moving Average (20)', description: 'Fast trend', default: true, required: false },
+                'EMA_50': { name: 'Exponential Moving Average (50)', description: 'Medium trend', default: true, required: true },
+                'ADX': { name: 'Average Directional Index', description: 'Trend strength', default: true, required: false }
+            },
+            'Momentum Indicators': {
+                'RSI': { name: 'Relative Strength Index', description: 'Momentum oscillator', default: true, required: true },
+                'MACD': { name: 'MACD', description: 'Trend momentum', default: true, required: true },
+                'Stochastic': { name: 'Stochastic Oscillator', description: 'Momentum indicator', default: true, required: false },
+                'Williams_R': { name: 'Williams %R', description: 'Momentum oscillator', default: true, required: false },
+                'ROC': { name: 'Rate of Change', description: 'Price momentum', default: false, required: false },
+                'CCI': { name: 'Commodity Channel Index', description: 'Momentum indicator', default: false, required: false },
+                'UO': { name: 'Ultimate Oscillator', description: 'Multi-timeframe momentum', default: false, required: false },
+                'TRIX': { name: 'TRIX', description: 'Triple exponential momentum', default: false, required: false }
+            },
+            'Volume Indicators': {
+                'Volume_SMA': { name: 'Volume Moving Average', description: 'Volume trend', default: true, required: true },
+                'MFI': { name: 'Money Flow Index', description: 'Volume momentum', default: true, required: false },
+                'OBV': { name: 'On-Balance Volume', description: 'Volume accumulation', default: true, required: false },
+                'VWAP': { name: 'Volume Weighted Average Price', description: 'Volume-weighted price', default: false, required: false }
+            },
+            'Volatility Indicators': {
+                'BB': { name: 'Bollinger Bands', description: 'Volatility bands', default: true, required: false },
+                'ATR': { name: 'Average True Range', description: 'Volatility measure', default: true, required: false },
+                'PC': { name: 'Price Channels', description: 'Donchian channels', default: false, required: false }
+            }
+        };
+        
+        // Initialize indicator selection
+        function initializeIndicatorSelection() {
+            indicatorConfig = defaultIndicatorConfig;
+            selectedIndicators = getDefaultIndicators();
+            renderIndicatorSelection();
+            updateIndicatorCount();
+        }
+        
+        function getDefaultIndicators() {
+            const defaults = {};
+            Object.keys(indicatorConfig).forEach(category => {
+                Object.keys(indicatorConfig[category]).forEach(indicator => {
+                    if (indicatorConfig[category][indicator].required || indicatorConfig[category][indicator].default) {
+                        defaults[indicator] = true;
+                    }
+                });
+            });
+            return defaults;
+        }
+        
+        function renderIndicatorSelection() {
+            const container = document.getElementById('indicatorCategories');
+            if (!container) return;
+            
+            container.innerHTML = '';
+            
+            Object.keys(indicatorConfig).forEach(categoryName => {
+                const categoryDiv = document.createElement('div');
+                categoryDiv.className = 'indicator-category';
+                
+                const categoryHeader = document.createElement('div');
+                categoryHeader.className = 'category-header';
+                categoryHeader.innerHTML = `
+                    <h4>${categoryName}</h4>
+                    <div class="category-controls">
+                        <button class="category-btn" onclick="selectCategoryAll('${categoryName}')">All</button>
+                        <button class="category-btn" onclick="selectCategoryNone('${categoryName}')">None</button>
+                    </div>
+                `;
+                categoryDiv.appendChild(categoryHeader);
+                
+                const indicatorsGrid = document.createElement('div');
+                indicatorsGrid.className = 'indicators-grid';
+                
+                Object.keys(indicatorConfig[categoryName]).forEach(indicatorId => {
+                    const config = indicatorConfig[categoryName][indicatorId];
+                    const indicatorDiv = document.createElement('div');
+                    indicatorDiv.className = 'indicator-item';
+                    
+                    const isSelected = selectedIndicators[indicatorId] || false;
+                    const isRequired = config.required;
+                    
+                    indicatorDiv.innerHTML = `
+                        <label class="indicator-checkbox ${isRequired ? 'required' : ''}">
+                            <input type="checkbox" 
+                                   id="indicator_${indicatorId}" 
+                                   ${isSelected ? 'checked' : ''} 
+                                   ${isRequired ? 'disabled' : ''}
+                                   onchange="toggleIndicator('${indicatorId}')">
+                            <span class="checkmark"></span>
+                            <div class="indicator-info">
+                                <div class="indicator-name">${config.name}</div>
+                                <div class="indicator-description">${config.description}</div>
+                                ${isRequired ? '<span class="required-badge">Required</span>' : ''}
+                            </div>
+                        </label>
+                    `;
+                    
+                    indicatorsGrid.appendChild(indicatorDiv);
+                });
+                
+                categoryDiv.appendChild(indicatorsGrid);
+                container.appendChild(categoryDiv);
+            });
+        }
+        
+        function toggleIndicator(indicatorId) {
+            const checkbox = document.getElementById(`indicator_${indicatorId}`);
+            selectedIndicators[indicatorId] = checkbox.checked;
+            updateIndicatorCount();
+        }
+        
+        function selectCategoryAll(categoryName) {
+            Object.keys(indicatorConfig[categoryName]).forEach(indicatorId => {
+                selectedIndicators[indicatorId] = true;
+                const checkbox = document.getElementById(`indicator_${indicatorId}`);
+                if (checkbox) checkbox.checked = true;
+            });
+            updateIndicatorCount();
+        }
+        
+        function selectCategoryNone(categoryName) {
+            Object.keys(indicatorConfig[categoryName]).forEach(indicatorId => {
+                if (!indicatorConfig[categoryName][indicatorId].required) {
+                    selectedIndicators[indicatorId] = false;
+                    const checkbox = document.getElementById(`indicator_${indicatorId}`);
+                    if (checkbox) checkbox.checked = false;
+                }
+            });
+            updateIndicatorCount();
+        }
+        
+        function loadIndicatorPreset(presetName) {
+            switch(presetName) {
+                case 'minimal':
+                    selectedIndicators = {};
+                    Object.keys(indicatorConfig).forEach(category => {
+                        Object.keys(indicatorConfig[category]).forEach(indicator => {
+                            selectedIndicators[indicator] = indicatorConfig[category][indicator].required;
+                        });
+                    });
+                    break;
+                    
+                case 'default':
+                    selectedIndicators = getDefaultIndicators();
+                    break;
+                    
+                case 'advanced':
+                    selectedIndicators = {};
+                    Object.keys(indicatorConfig).forEach(category => {
+                        Object.keys(indicatorConfig[category]).forEach(indicator => {
+                            selectedIndicators[indicator] = true;
+                        });
+                    });
+                    // Exclude some very advanced ones
+                    selectedIndicators['TRIX'] = false;
+                    selectedIndicators['UO'] = false;
+                    break;
+                    
+                case 'all':
+                    selectedIndicators = {};
+                    Object.keys(indicatorConfig).forEach(category => {
+                        Object.keys(indicatorConfig[category]).forEach(indicator => {
+                            selectedIndicators[indicator] = true;
+                        });
+                    });
+                    break;
+            }
+            
+            // Update checkboxes
+            Object.keys(selectedIndicators).forEach(indicatorId => {
+                const checkbox = document.getElementById(`indicator_${indicatorId}`);
+                if (checkbox) checkbox.checked = selectedIndicators[indicatorId];
+            });
+            
+            updateIndicatorCount();
+        }
+        
+        function toggleIndicatorSelection() {
+            const panel = document.getElementById('indicatorSelectionPanel');
+            const icon = document.getElementById('indicatorToggleIcon');
+            const text = document.getElementById('indicatorToggleText');
+            
+            if (panel.style.display === 'none') {
+                panel.style.display = 'block';
+                icon.textContent = '▲';
+                text.textContent = 'Hide Indicators';
+            } else {
+                panel.style.display = 'none';
+                icon.textContent = '▼';
+                text.textContent = 'Customize Indicators';
+            }
+        }
+        
+        function updateIndicatorCount() {
+            const count = Object.values(selectedIndicators).filter(Boolean).length;
+            document.getElementById('selectedIndicatorCount').textContent = count;
+        }
+        
+        // Load quick select tickers from backend
+        function loadQuickSelectTickers() {
+            console.log('Loading quick select tickers from backend...');
+            
+            fetch('/api/tickers')
+                .then(function(response) {
+                    if (!response.ok) {
+                        throw new Error('Failed to load tickers: ' + response.status);
+                    }
+                    return response.json();
+                })
+                .then(function(data) {
+                    console.log('Tickers loaded:', data);
+                    quickSelectTickers = data.tickers || [];
+                    renderQuickSelectButtons();
+                })
+                .catch(function(error) {
+                    console.error('Error loading tickers:', error);
+                    // Fallback to default tickers if API fails
+                    quickSelectTickers = ['AAPL', 'GOOGL', 'MSFT', 'TSLA', 'NVDA', 'AMZN', 'META', 'AMD', 'NFLX', 'SPY'];
+                    renderQuickSelectButtons();
+                    showError('Using default tickers. Backend connection issue: ' + error.message);
+                });
+        }
+        
+        // Render quick select buttons dynamically
+        function renderQuickSelectButtons() {
+            const container = document.getElementById('quickSelectRow');
+            if (!container) {
+                console.error('Quick select container not found');
+                return;
+            }
+            
+            container.innerHTML = ''; // Clear existing buttons
+            
+            quickSelectTickers.forEach(function(ticker) {
+                const button = document.createElement('button');
+                button.className = 'quick-symbol-compact';
+                button.textContent = ticker;
+                button.onclick = function() { quickAnalyze(ticker); };
+                container.appendChild(button);
+            });
+            
+            console.log('Rendered', quickSelectTickers.length, 'quick select buttons');
+        }
         
         // Main analysis function
         function analyzeSymbol(symbol) {
@@ -136,7 +376,18 @@
             hideResults();
             hideError();
             
-            fetch('/analyze/' + symbol)
+            // Prepare selected indicators for backend
+            const indicatorsList = Object.keys(selectedIndicators).filter(key => selectedIndicators[key]);
+            
+            fetch('/analyze/' + symbol, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    indicators: indicatorsList
+                })
+            })
                 .then(function(response) {
                     if (!response.ok) {
                         throw new Error('HTTP ' + response.status + ': ' + response.statusText);
@@ -249,39 +500,80 @@
         function generateMetricsHTML(data) {
             var tech = data.technical_data;
             var valuation = data.valuation_metrics;
+            var scores = data.indicator_scores || {};
             
             return '<div class="metric-card">' +
                     '<div class="metric-label">RSI (14)</div>' +
-                    '<div class="metric-value">' + tech.RSI.toFixed(1) + '</div>' +
+                    '<div class="metric-value ' + getIndicatorClass('RSI', scores) + '">' + 
+                        tech.RSI.toFixed(1) + 
+                        '<span class="indicator-signal">' + getIndicatorSignal('RSI', scores) + '</span>' +
+                    '</div>' +
                 '</div>' +
                 '<div class="metric-card">' +
                     '<div class="metric-label">MACD</div>' +
-                    '<div class="metric-value">' + tech.MACD.toFixed(3) + '</div>' +
+                    '<div class="metric-value ' + getIndicatorClass('MACD', scores) + '">' + 
+                        tech.MACD.toFixed(3) + 
+                        '<span class="indicator-signal">' + getIndicatorSignal('MACD', scores) + '</span>' +
+                    '</div>' +
                 '</div>' +
                 '<div class="metric-card">' +
                     '<div class="metric-label">ADX</div>' +
-                    '<div class="metric-value">' + tech.ADX.toFixed(1) + '</div>' +
+                    '<div class="metric-value ' + getIndicatorClass('ADX', scores) + '">' + 
+                        tech.ADX.toFixed(1) + 
+                        '<span class="indicator-signal">' + getIndicatorSignal('ADX', scores) + '</span>' +
+                    '</div>' +
                 '</div>' +
                 '<div class="metric-card">' +
                     '<div class="metric-label">Williams %R</div>' +
-                    '<div class="metric-value">' + tech.Williams_R.toFixed(1) + '</div>' +
+                    '<div class="metric-value ' + getIndicatorClass('Williams_R', scores) + '">' + 
+                        tech.Williams_R.toFixed(1) + 
+                        '<span class="indicator-signal">' + getIndicatorSignal('Williams_R', scores) + '</span>' +
+                    '</div>' +
                 '</div>' +
                 '<div class="metric-card">' +
                     '<div class="metric-label">Money Flow Index</div>' +
-                    '<div class="metric-value">' + tech.MFI.toFixed(1) + '</div>' +
+                    '<div class="metric-value ' + getIndicatorClass('MFI', scores) + '">' + 
+                        tech.MFI.toFixed(1) + 
+                        '<span class="indicator-signal">' + getIndicatorSignal('MFI', scores) + '</span>' +
+                    '</div>' +
                 '</div>' +
                 '<div class="metric-card">' +
                     '<div class="metric-label">vs SMA 200</div>' +
-                    '<div class="metric-value">' + valuation.distance_from_sma200.toFixed(1) + '%</div>' +
+                    '<div class="metric-value ' + getIndicatorClass('SMA_200_Position', scores) + '">' + 
+                        valuation.distance_from_sma200.toFixed(1) + '%' +
+                        '<span class="indicator-signal">' + getIndicatorSignal('SMA_200_Position', scores) + '</span>' +
+                    '</div>' +
                 '</div>' +
                 '<div class="metric-card">' +
                     '<div class="metric-label">52W Position</div>' +
-                    '<div class="metric-value">' + valuation.position_52w.toFixed(1) + '%</div>' +
+                    '<div class="metric-value ' + getIndicatorClass('Position_52W', scores) + '">' + 
+                        valuation.position_52w.toFixed(1) + '%' +
+                        '<span class="indicator-signal">' + getIndicatorSignal('Position_52W', scores) + '</span>' +
+                    '</div>' +
                 '</div>' +
                 '<div class="metric-card">' +
-                    '<div class="metric-label">Volatility</div>' +
-                    '<div class="metric-value">' + valuation.volatility_20d.toFixed(1) + '%</div>' +
+                    '<div class="metric-label">Volume Ratio</div>' +
+                    '<div class="metric-value ' + getIndicatorClass('Volume_Ratio', scores) + '">' + 
+                        tech.Volume_Ratio.toFixed(2) + 'x' +
+                        '<span class="indicator-signal">' + getIndicatorSignal('Volume_Ratio', scores) + '</span>' +
+                    '</div>' +
                 '</div>';
+        }
+        
+        function getIndicatorClass(indicator, scores) {
+            if (!scores[indicator]) return 'indicator-neutral';
+            
+            switch(scores[indicator].score) {
+                case 'bullish': return 'indicator-bullish';
+                case 'bearish': return 'indicator-bearish';
+                case 'neutral': return 'indicator-neutral';
+                default: return 'indicator-neutral';
+            }
+        }
+        
+        function getIndicatorSignal(indicator, scores) {
+            if (!scores[indicator]) return '';
+            return scores[indicator].signal || '';
         }
         
         function generateScoreBreakdownHTML(data) {
@@ -499,9 +791,329 @@
             if (errorDiv) errorDiv.style.display = 'none';
         }
         
+        // Enhanced JavaScript functions for color-coded indicators
+        // Add these functions to your index.html script section
+
+        // Enhanced metrics HTML generation with color coding
+        function generateMetricsHTML(data) {
+            var tech = data.technical_data;
+            var valuation = data.valuation_metrics;
+            var scores = data.indicator_scores || {};
+            
+            return `
+                <div class="metric-card ${getIndicatorClass('RSI', scores)}">
+                    <div class="metric-label">RSI (14)</div>
+                    <div class="metric-value">
+                        ${tech.RSI.toFixed(1)}
+                        <span class="indicator-signal">${getIndicatorSignal('RSI', scores)}</span>
+                    </div>
+                </div>
+                <div class="metric-card ${getIndicatorClass('MACD', scores)}">
+                    <div class="metric-label">MACD</div>
+                    <div class="metric-value">
+                        ${tech.MACD.toFixed(3)}
+                        <span class="indicator-signal">${getIndicatorSignal('MACD', scores)}</span>
+                    </div>
+                </div>
+                <div class="metric-card ${getIndicatorClass('ADX', scores)}">
+                    <div class="metric-label">ADX</div>
+                    <div class="metric-value">
+                        ${tech.ADX.toFixed(1)}
+                        <span class="indicator-signal">${getIndicatorSignal('ADX', scores)}</span>
+                    </div>
+                </div>
+                <div class="metric-card ${getIndicatorClass('Williams_R', scores)}">
+                    <div class="metric-label">Williams %R</div>
+                    <div class="metric-value">
+                        ${tech.Williams_R.toFixed(1)}
+                        <span class="indicator-signal">${getIndicatorSignal('Williams_R', scores)}</span>
+                    </div>
+                </div>
+                <div class="metric-card ${getIndicatorClass('MFI', scores)}">
+                    <div class="metric-label">Money Flow Index</div>
+                    <div class="metric-value">
+                        ${tech.MFI.toFixed(1)}
+                        <span class="indicator-signal">${getIndicatorSignal('MFI', scores)}</span>
+                    </div>
+                </div>
+                <div class="metric-card ${getIndicatorClass('BB_Position', scores)}">
+                    <div class="metric-label">Bollinger Band Position</div>
+                    <div class="metric-value">
+                        ${tech.BB_Position.toFixed(1)}%
+                        <span class="indicator-signal">${getIndicatorSignal('BB_Position', scores)}</span>
+                    </div>
+                </div>
+                <div class="metric-card ${getIndicatorClass('SMA_200_Position', scores)}">
+                    <div class="metric-label">vs SMA 200</div>
+                    <div class="metric-value">
+                        ${valuation.distance_from_sma200.toFixed(1)}%
+                        <span class="indicator-signal">${getIndicatorSignal('SMA_200_Position', scores)}</span>
+                    </div>
+                </div>
+                <div class="metric-card ${getIndicatorClass('Position_52W', scores)}">
+                    <div class="metric-label">52W Position</div>
+                    <div class="metric-value">
+                        ${valuation.position_52w.toFixed(1)}%
+                        <span class="indicator-signal">${getIndicatorSignal('Position_52W', scores)}</span>
+                    </div>
+                </div>
+                <div class="metric-card ${getIndicatorClass('Volume_Ratio', scores)}">
+                    <div class="metric-label">Volume Ratio</div>
+                    <div class="metric-value">
+                        ${tech.Volume_Ratio.toFixed(2)}x
+                        <span class="indicator-signal">${getIndicatorSignal('Volume_Ratio', scores)}</span>
+                    </div>
+                </div>
+                <div class="metric-card ${getIndicatorClass('Stochastic', scores)}">
+                    <div class="metric-label">Stochastic</div>
+                    <div class="metric-value">
+                        ${getStochasticValue(scores)}
+                        <span class="indicator-signal">${getIndicatorSignal('Stochastic', scores)}</span>
+                    </div>
+                </div>
+                <div class="metric-card ${getIndicatorClass('CCI', scores)}">
+                    <div class="metric-label">CCI</div>
+                    <div class="metric-value">
+                        ${tech.CCI.toFixed(1)}
+                        <span class="indicator-signal">${getIndicatorSignal('CCI', scores)}</span>
+                    </div>
+                </div>
+                <div class="metric-card ${getIndicatorClass('ROC', scores)}">
+                    <div class="metric-label">Rate of Change</div>
+                    <div class="metric-value">
+                        ${tech.ROC.toFixed(1)}%
+                        <span class="indicator-signal">${getIndicatorSignal('ROC', scores)}</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Enhanced indicator class function
+        function getIndicatorClass(indicator, scores) {
+            if (!scores[indicator]) return 'indicator-neutral';
+            
+            switch(scores[indicator].score) {
+                case 'bullish': return 'indicator-bullish';
+                case 'bearish': return 'indicator-bearish';
+                case 'neutral': return 'indicator-neutral';
+                default: return 'indicator-neutral';
+            }
+        }
+
+        // Enhanced indicator signal function
+        function getIndicatorSignal(indicator, scores) {
+            if (!scores[indicator]) return 'No Signal';
+            return scores[indicator].signal || 'No Signal';
+        }
+
+        // Helper function for stochastic value display
+        function getStochasticValue(scores) {
+            if (scores['Stochastic'] && scores['Stochastic'].value) {
+                return scores['Stochastic'].value;
+            }
+            return 'N/A';
+        }
+
+        // Enhanced display results function with improved indicator visualization
+        function displayResults(data) {
+            var resultDiv = document.getElementById('analysisResult');
+            var signalInfo = getSignalInfo(data);
+            var scoreClass = getScoreClass(data.signal_score);
+            
+            // Enhanced header with indicator summary
+            var resultHTML = `
+                <div class="result-header">
+                    <div>
+                        <h2 class="symbol-title">${data.symbol}</h2>
+                        <p>Price: $${data.current_price.toFixed(2)} | Date: ${data.date}</p>
+                        ${generateIndicatorSummary(data.indicator_scores)}
+                    </div>
+                    <div style="display: flex; align-items: center;">
+                        <div class="score-circle ${scoreClass}">
+                            ${data.signal_score}/20
+                        </div>
+                        <div class="signal-badge ${signalInfo.signalClass}">
+                            ${signalInfo.signalText}
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Add technical metrics with color coding
+            if (data.technical_data) {
+                resultHTML += `<div class="metrics-grid">${generateMetricsHTML(data)}</div>`;
+            }
+            
+            // Add indicator breakdown section
+            if (data.indicator_scores) {
+                resultHTML += generateIndicatorBreakdownHTML(data.indicator_scores);
+            }
+            
+            // Add score breakdown
+            if (data.score_breakdown) {
+                resultHTML += generateScoreBreakdownHTML(data);
+            }
+            
+            // Add trading plan for BUY signals
+            if (data.trading_plan && data.entry_signal) {
+                resultHTML += generateTradingPlanHTML(data);
+            }
+            
+            // Add entry recommendations for HOLD/WAIT signals
+            if (!data.entry_signal && data.valuation_metrics) {
+                resultHTML += generateEntryRecommendationsHTML(data);
+            }
+            
+            // Add signals list
+            if (data.signals && data.signals.length > 0) {
+                resultHTML += generateSignalsHTML(data.signals);
+            }
+            
+            resultDiv.innerHTML = resultHTML;
+            resultDiv.style.display = 'block';
+            
+            // Add animation for indicator cards
+            setTimeout(function() {
+                animateIndicatorCards();
+            }, 100);
+        }
+
+        // Generate indicator summary
+        function generateIndicatorSummary(scores) {
+            if (!scores) return '';
+            
+            var bullishCount = 0;
+            var bearishCount = 0;
+            var neutralCount = 0;
+            
+            Object.values(scores).forEach(function(score) {
+                switch(score.score) {
+                    case 'bullish': bullishCount++; break;
+                    case 'bearish': bearishCount++; break;
+                    case 'neutral': neutralCount++; break;
+                }
+            });
+            
+            return `
+                <div class="indicator-summary">
+                    <span class="summary-item bullish">🟢 ${bullishCount} Bullish</span>
+                    <span class="summary-item neutral">🟡 ${neutralCount} Neutral</span>
+                    <span class="summary-item bearish">🔴 ${bearishCount} Bearish</span>
+                </div>
+            `;
+        }
+
+        // Generate detailed indicator breakdown
+        function generateIndicatorBreakdownHTML(scores) {
+            var html = `
+                <div class="indicator-breakdown">
+                    <h4>📊 Indicator Analysis Summary:</h4>
+                    <div class="breakdown-categories">
+            `;
+            
+            // Group indicators by status
+            var bullishIndicators = [];
+            var bearishIndicators = [];
+            var neutralIndicators = [];
+            
+            Object.entries(scores).forEach(function([key, value]) {
+                var displayName = getIndicatorDisplayName(key);
+                var item = { name: displayName, signal: value.signal, value: value.value };
+                
+                switch(value.score) {
+                    case 'bullish': bullishIndicators.push(item); break;
+                    case 'bearish': bearishIndicators.push(item); break;
+                    case 'neutral': neutralIndicators.push(item); break;
+                }
+            });
+            
+            // Generate breakdown sections
+            if (bullishIndicators.length > 0) {
+                html += generateIndicatorCategoryHTML('Bullish Signals', bullishIndicators, 'bullish');
+            }
+            
+            if (neutralIndicators.length > 0) {
+                html += generateIndicatorCategoryHTML('Neutral Signals', neutralIndicators, 'neutral');
+            }
+            
+            if (bearishIndicators.length > 0) {
+                html += generateIndicatorCategoryHTML('Bearish Signals', bearishIndicators, 'bearish');
+            }
+            
+            html += '</div></div>';
+            return html;
+        }
+
+        // Generate indicator category HTML
+        function generateIndicatorCategoryHTML(title, indicators, type) {
+            var icon = type === 'bullish' ? '🟢' : type === 'bearish' ? '🔴' : '🟡';
+            var className = `breakdown-category ${type}`;
+            
+            var html = `
+                <div class="${className}">
+                    <h5>${icon} ${title} (${indicators.length})</h5>
+                    <div class="category-indicators">
+            `;
+            
+            indicators.forEach(function(indicator) {
+                html += `
+                    <div class="indicator-detail">
+                        <span class="indicator-name">${indicator.name}</span>
+                        <span class="indicator-signal">${indicator.signal}</span>
+                    </div>
+                `;
+            });
+            
+            html += '</div></div>';
+            return html;
+        }
+
+        // Get display name for indicators
+        function getIndicatorDisplayName(key) {
+            var names = {
+                'RSI': 'RSI (14)',
+                'MACD': 'MACD',
+                'ADX': 'ADX',
+                'Williams_R': 'Williams %R',
+                'MFI': 'Money Flow Index',
+                'BB_Position': 'Bollinger Bands',
+                'SMA_200_Position': 'SMA 200',
+                'Position_52W': '52-Week Position',
+                'Volume_Ratio': 'Volume',
+                'Stochastic': 'Stochastic',
+                'CCI': 'CCI',
+                'ROC': 'Rate of Change'
+            };
+            
+            return names[key] || key;
+        }
+
+        // Animate indicator cards on load
+        function animateIndicatorCards() {
+            var cards = document.querySelectorAll('.metric-card');
+            cards.forEach(function(card, index) {
+                setTimeout(function() {
+                    card.style.opacity = '0';
+                    card.style.transform = 'translateY(20px)';
+                    
+                    setTimeout(function() {
+                        card.style.transition = 'all 0.5s ease';
+                        card.style.opacity = '1';
+                        card.style.transform = 'translateY(0)';
+                    }, 50);
+                }, index * 100);
+            });
+        }        
+
         // Initialize
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('Dashboard ready with 10 quick select tickers');
+            console.log('Dashboard initializing...');
+            
+            // Load quick select tickers from backend
+            loadQuickSelectTickers();
+            
+            // Initialize indicator selection
+            initializeIndicatorSelection();
             
             // Setup input field
             var input = document.getElementById('symbolInput');
@@ -516,6 +1128,8 @@
                     input.select();
                 });
             }
+            
+            console.log('Dashboard ready');
         });
         
         // Keyboard shortcuts

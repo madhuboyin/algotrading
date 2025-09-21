@@ -1,4 +1,4 @@
-/* Enhanced styles.css - Main Stylesheet with Quick Select Features */
+/* Complete Enhanced styles.css - Main Stylesheet with Color-Coded Indicators */
 
 * {
     margin: 0;
@@ -76,79 +76,300 @@ body {
     backdrop-filter: blur(10px);
 }
 
-/* Quick Select Container */
+/* Quick Select Container - Compact */
 .quick-select-container {
-    margin-bottom: 30px;
+    margin-bottom: 20px;
     text-align: center;
 }
 
 .quick-select-container h3 {
     color: white;
-    margin-bottom: 20px;
-    font-size: 1.3rem;
+    margin-bottom: 15px;
+    font-size: 1.1rem;
 }
 
-/* Quick Symbols Grid - 10 Tickers */
-.quick-symbols-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 15px;
-    margin-bottom: 20px;
+/* Compact Single Row Layout */
+.quick-symbols-row {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 15px;
 }
 
-.quick-symbol-btn {
+.quick-symbol-compact {
     background: rgba(255, 255, 255, 0.15);
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 8px;
     color: white;
-    padding: 20px 15px;
+    padding: 8px 12px;
     cursor: pointer;
     transition: all 0.3s ease;
     backdrop-filter: blur(10px);
+    font-size: 0.9rem;
+    font-weight: bold;
+    min-width: 60px;
+    text-align: center;
+}
+
+.quick-symbol-compact:hover {
+    background: rgba(255, 255, 255, 0.25);
+    border-color: rgba(255, 255, 255, 0.5);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.quick-symbol-compact.active {
+    background: rgba(76, 175, 80, 0.3);
+    border-color: #4CAF50;
+    box-shadow: 0 0 15px rgba(76, 175, 80, 0.4);
+}
+
+/* Indicator Selection Styles */
+.indicator-selection-container {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+    backdrop-filter: blur(10px);
+}
+
+.indicator-selection-container h3 {
+    color: white;
+    margin-bottom: 15px;
+    font-size: 1.1rem;
+}
+
+.indicator-toggle-header {
     display: flex;
-    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.toggle-indicators-btn {
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 8px;
+    color: white;
+    padding: 8px 16px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
     align-items: center;
     gap: 8px;
-    min-height: 100px;
-    position: relative;
+    font-size: 0.9rem;
+}
+
+.toggle-indicators-btn:hover {
+    background: rgba(255, 255, 255, 0.25);
+    border-color: rgba(255, 255, 255, 0.5);
+}
+
+.indicator-summary {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 0.9rem;
+}
+
+.indicator-selection-panel {
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 10px;
+    padding: 20px;
+    margin-top: 15px;
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.indicator-controls {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.preset-btn {
+    background: #f0f8ff;
+    border: 1px solid #2196f3;
+    border-radius: 6px;
+    color: #2196f3;
+    padding: 6px 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 0.85rem;
+}
+
+.preset-btn:hover {
+    background: #2196f3;
+    color: white;
+}
+
+.indicator-category {
+    margin-bottom: 25px;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
     overflow: hidden;
 }
 
-.quick-symbol-btn:hover {
-    background: rgba(255, 255, 255, 0.25);
-    border-color: rgba(255, 255, 255, 0.5);
-    transform: translateY(-3px);
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+.category-header {
+    background: #f8f9fa;
+    padding: 15px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #e0e0e0;
 }
 
-.quick-symbol-btn.active {
-    background: rgba(76, 175, 80, 0.3);
-    border-color: #4CAF50;
-    box-shadow: 0 0 20px rgba(76, 175, 80, 0.4);
+.category-header h4 {
+    color: #333;
+    margin: 0;
+    font-size: 1rem;
 }
 
-.quick-symbol-btn.featured {
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.1));
-    border: 2px solid rgba(255, 255, 255, 0.4);
+.category-controls {
+    display: flex;
+    gap: 8px;
 }
 
-.quick-symbol-btn.featured:hover {
-    background: linear-gradient(135deg, rgba(33, 150, 243, 0.3), rgba(76, 175, 80, 0.3));
-    border-color: #2196F3;
+.category-btn {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    color: #666;
+    padding: 4px 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 0.8rem;
 }
 
-.quick-symbol-btn .symbol {
-    font-size: 1.4rem;
-    font-weight: bold;
-    color: #ffeb3b;
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+.category-btn:hover {
+    background: #f0f0f0;
+    border-color: #999;
 }
 
-.quick-symbol-btn .company {
+.indicators-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 10px;
+    padding: 15px 20px;
+}
+
+.indicator-item {
+    background: #fff;
+    border: 1px solid #eee;
+    border-radius: 6px;
+    transition: all 0.3s ease;
+}
+
+.indicator-item:hover {
+    border-color: #2196f3;
+    box-shadow: 0 2px 8px rgba(33, 150, 243, 0.1);
+}
+
+.indicator-checkbox {
+    display: flex;
+    align-items: flex-start;
+    padding: 12px;
+    cursor: pointer;
+    position: relative;
+}
+
+.indicator-checkbox.required {
+    background: #f0f8ff;
+    border-left: 3px solid #2196f3;
+}
+
+.indicator-checkbox input[type="checkbox"] {
+    position: absolute;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.checkmark {
+    height: 18px;
+    width: 18px;
+    background-color: #fff;
+    border: 2px solid #ddd;
+    border-radius: 3px;
+    margin-right: 12px;
+    margin-top: 2px;
+    flex-shrink: 0;
+    transition: all 0.3s ease;
+}
+
+.indicator-checkbox:hover input ~ .checkmark {
+    border-color: #2196f3;
+}
+
+.indicator-checkbox input:checked ~ .checkmark {
+    background-color: #2196f3;
+    border-color: #2196f3;
+}
+
+.checkmark:after {
+    content: "";
+    position: absolute;
+    display: none;
+    left: 5px;
+    top: 1px;
+    width: 4px;
+    height: 8px;
+    border: solid white;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+
+.indicator-checkbox input:checked ~ .checkmark:after {
+    display: block;
+}
+
+.indicator-info {
+    flex: 1;
+}
+
+.indicator-name {
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 4px;
     font-size: 0.9rem;
-    opacity: 0.9;
-    text-align: center;
-    line-height: 1.2;
+}
+
+.indicator-description {
+    color: #666;
+    font-size: 0.8rem;
+    line-height: 1.3;
+}
+
+.required-badge {
+    display: inline-block;
+    background: #2196f3;
+    color: white;
+    padding: 2px 6px;
+    border-radius: 10px;
+    font-size: 0.7rem;
+    margin-top: 4px;
+    font-weight: 500;
+}
+
+.indicator-checkbox input:disabled ~ .checkmark {
+    background-color: #f0f0f0;
+    border-color: #ccc;
+}
+
+.indicator-checkbox input:disabled:checked ~ .checkmark {
+    background-color: #2196f3;
+    border-color: #2196f3;
+    opacity: 0.7;
 }
 
 /* Custom Input Container */
@@ -277,6 +498,36 @@ body {
     color: #333;
 }
 
+/* Indicator Summary in Header */
+.indicator-summary {
+    display: flex;
+    gap: 15px;
+    margin-top: 8px;
+    flex-wrap: wrap;
+}
+
+.summary-item {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.summary-item.bullish {
+    background: rgba(76, 175, 80, 0.15);
+    color: #2e7d32;
+}
+
+.summary-item.bearish {
+    background: rgba(244, 67, 54, 0.15);
+    color: #c62828;
+}
+
+.summary-item.neutral {
+    background: rgba(255, 152, 0, 0.15);
+    color: #e65100;
+}
+
 /* Signal Badges */
 .signal-badge {
     padding: 10px 20px;
@@ -314,16 +565,38 @@ body {
     margin: 0 20px;
 }
 
-.score-high { background: #4CAF50; }     /* 12-20 points */
-.score-medium { background: #ff9800; }   /* 8-11 points */
-.score-low { background: #f44336; }      /* 5-7 points */
-.score-very-low { background: #9e9e9e; } /* 0-4 points */
+.score-high { background: #4CAF50; }
+.score-medium { background: #ff9800; }
+.score-low { background: #f44336; }
+.score-very-low { background: #9e9e9e; }
+
+/* Enhanced Color-Coded Indicator Styles */
+.indicator-bullish {
+    color: #4CAF50 !important;
+    background: rgba(76, 175, 80, 0.1);
+    border-left: 3px solid #4CAF50 !important;
+    font-weight: bold;
+}
+
+.indicator-bearish {
+    color: #f44336 !important;
+    background: rgba(244, 67, 54, 0.1);
+    border-left: 3px solid #f44336 !important;
+    font-weight: bold;
+}
+
+.indicator-neutral {
+    color: #ff9800 !important;
+    background: rgba(255, 152, 0, 0.1);
+    border-left: 3px solid #ff9800 !important;
+    font-weight: bold;
+}
 
 /* Metrics Grid */
 .metrics-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 20px;
+    gap: 15px;
     margin-bottom: 30px;
 }
 
@@ -333,6 +606,8 @@ body {
     border-radius: 10px;
     border-left: 4px solid #667eea;
     transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
 }
 
 .metric-card:hover {
@@ -340,17 +615,268 @@ body {
     box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
 
+/* Enhanced metric cards with dynamic colors */
+.metric-card.indicator-bullish {
+    border-left: 4px solid #4CAF50;
+    background: linear-gradient(135deg, rgba(76, 175, 80, 0.05), rgba(76, 175, 80, 0.15));
+}
+
+.metric-card.indicator-bearish {
+    border-left: 4px solid #f44336;
+    background: linear-gradient(135deg, rgba(244, 67, 54, 0.05), rgba(244, 67, 54, 0.15));
+}
+
+.metric-card.indicator-neutral {
+    border-left: 4px solid #ff9800;
+    background: linear-gradient(135deg, rgba(255, 152, 0, 0.05), rgba(255, 152, 0, 0.15));
+}
+
+.metric-card::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 3px;
+    height: 100%;
+    background: #ddd;
+    transition: all 0.3s ease;
+}
+
+.metric-card.indicator-bullish::after {
+    background: linear-gradient(to bottom, #4CAF50, #66BB6A);
+}
+
+.metric-card.indicator-bearish::after {
+    background: linear-gradient(to bottom, #f44336, #EF5350);
+}
+
+.metric-card.indicator-neutral::after {
+    background: linear-gradient(to bottom, #ff9800, #FFB74D);
+}
+
 .metric-label {
     font-size: 0.9rem;
     color: #666;
     margin-bottom: 5px;
+    position: relative;
+    padding-left: 15px;
+}
+
+.metric-label::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #ddd;
+}
+
+.indicator-bullish .metric-label::before {
+    background: #4CAF50;
+    box-shadow: 0 0 6px rgba(76, 175, 80, 0.4);
+}
+
+.indicator-bearish .metric-label::before {
+    background: #f44336;
+    box-shadow: 0 0 6px rgba(244, 67, 54, 0.4);
+}
+
+.indicator-neutral .metric-label::before {
+    background: #ff9800;
+    box-shadow: 0 0 6px rgba(255, 152, 0, 0.4);
 }
 
 .metric-value {
     font-size: 1.5rem;
     font-weight: bold;
     color: #333;
+    transition: all 0.3s ease;
+    border-radius: 8px;
+    padding: 8px;
 }
+
+.metric-card:hover .metric-value {
+    transform: scale(1.02);
+}
+
+/* Enhanced metric card hover effects based on indicator status */
+.metric-card.indicator-bullish:hover {
+    box-shadow: 0 6px 20px rgba(76, 175, 80, 0.3);
+    transform: translateY(-3px);
+}
+
+.metric-card.indicator-bearish:hover {
+    box-shadow: 0 6px 20px rgba(244, 67, 54, 0.3);
+    transform: translateY(-3px);
+}
+
+.metric-card.indicator-neutral:hover {
+    box-shadow: 0 6px 20px rgba(255, 152, 0, 0.3);
+    transform: translateY(-3px);
+}
+
+/* Indicator signal badges */
+.indicator-signal {
+    display: block;
+    font-size: 0.7rem;
+    font-weight: normal;
+    margin-top: 4px;
+    padding: 2px 6px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.8);
+    color: #333;
+    text-align: center;
+    line-height: 1.2;
+}
+
+.indicator-bullish .indicator-signal {
+    background: rgba(76, 175, 80, 0.2);
+    color: #2e7d32;
+}
+
+.indicator-bearish .indicator-signal {
+    background: rgba(244, 67, 54, 0.2);
+    color: #c62828;
+}
+
+.indicator-neutral .indicator-signal {
+    background: rgba(255, 152, 0, 0.2);
+    color: #e65100;
+}
+
+/* Indicator Breakdown Section */
+.indicator-breakdown {
+    background: #f8f9fc;
+    border-radius: 12px;
+    padding: 25px;
+    margin: 25px 0;
+    border: 2px solid #e3f2fd;
+}
+
+.indicator-breakdown h4 {
+    color: #1565c0;
+    margin-bottom: 20px;
+    text-align: center;
+    font-size: 1.2rem;
+}
+
+.breakdown-categories {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+.breakdown-category {
+    background: white;
+    border-radius: 10px;
+    padding: 15px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    animation: fadeInUp 0.6s ease-out;
+}
+
+.breakdown-category.bullish {
+    border-left: 4px solid #4CAF50;
+    background: linear-gradient(135deg, rgba(76, 175, 80, 0.02), rgba(76, 175, 80, 0.08));
+}
+
+.breakdown-category.bearish {
+    border-left: 4px solid #f44336;
+    background: linear-gradient(135deg, rgba(244, 67, 54, 0.02), rgba(244, 67, 54, 0.08));
+}
+
+.breakdown-category.neutral {
+    border-left: 4px solid #ff9800;
+    background: linear-gradient(135deg, rgba(255, 152, 0, 0.02), rgba(255, 152, 0, 0.08));
+}
+
+.breakdown-category h5 {
+    margin-bottom: 12px;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.breakdown-category.bullish h5 {
+    color: #2e7d32;
+}
+
+.breakdown-category.bearish h5 {
+    color: #c62828;
+}
+
+.breakdown-category.neutral h5 {
+    color: #e65100;
+}
+
+.category-indicators {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.indicator-detail {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.7);
+    border-radius: 6px;
+    border-left: 2px solid #ddd;
+    transition: all 0.3s ease;
+}
+
+.breakdown-category.bullish .indicator-detail {
+    border-left-color: #4CAF50;
+}
+
+.breakdown-category.bearish .indicator-detail {
+    border-left-color: #f44336;
+}
+
+.breakdown-category.neutral .indicator-detail {
+    border-left-color: #ff9800;
+}
+
+.indicator-detail:hover {
+    transform: translateX(3px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.indicator-name {
+    font-weight: 600;
+    color: #333;
+    font-size: 0.9rem;
+}
+
+.indicator-detail .indicator-signal {
+    font-size: 0.8rem;
+    color: #666;
+    font-style: italic;
+    background: none;
+    padding: 0;
+    margin: 0;
+    border-radius: 0;
+}
+
+/* Enhanced animations for indicator breakdown */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.breakdown-category:nth-child(1) { animation-delay: 0.1s; }
+.breakdown-category:nth-child(2) { animation-delay: 0.2s; }
+.breakdown-category:nth-child(3) { animation-delay: 0.3s; }
 
 /* Score Breakdown */
 .score-breakdown {
@@ -673,22 +1199,29 @@ body {
 
 /* Responsive Design */
 @media (max-width: 768px) {
-    .quick-symbols-grid {
-        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-        gap: 10px;
+    .quick-symbols-row {
+        gap: 6px;
     }
     
-    .quick-symbol-btn {
-        padding: 15px 10px;
-        min-height: 80px;
-    }
-    
-    .quick-symbol-btn .symbol {
-        font-size: 1.2rem;
-    }
-    
-    .quick-symbol-btn .company {
+    .quick-symbol-compact {
+        padding: 6px 8px;
         font-size: 0.8rem;
+        min-width: 50px;
+    }
+    
+    .indicator-controls {
+        justify-content: center;
+    }
+    
+    .indicator-toggle-header {
+        flex-direction: column;
+        gap: 10px;
+        text-align: center;
+    }
+    
+    .indicators-grid {
+        grid-template-columns: 1fr;
+        gap: 8px;
     }
     
     .input-container {
@@ -736,11 +1269,59 @@ body {
         flex-direction: column;
         gap: 15px;
     }
+    
+    .breakdown-categories {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+    
+    .indicator-summary {
+        flex-direction: column;
+        gap: 8px;
+        align-items: flex-start;
+    }
+    
+    .summary-item {
+        font-size: 0.75rem;
+        padding: 3px 6px;
+    }
+    
+    .indicator-detail {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+    }
+    
+    .indicator-detail .indicator-signal {
+        align-self: flex-end;
+        font-size: 0.75rem;
+    }
+    
+    .indicator-signal {
+        font-size: 0.65rem;
+        padding: 1px 4px;
+        margin-top: 2px;
+    }
+    
+    .metric-label {
+        padding-left: 12px;
+    }
+    
+    .metric-label::before {
+        width: 6px;
+        height: 6px;
+    }
 }
 
 @media (max-width: 480px) {
-    .quick-symbols-grid {
-        grid-template-columns: 1fr 1fr;
+    .quick-symbols-row {
+        gap: 4px;
+    }
+    
+    .quick-symbol-compact {
+        padding: 5px 6px;
+        font-size: 0.75rem;
+        min-width: 45px;
     }
     
     .container {
@@ -749,5 +1330,32 @@ body {
     
     body {
         padding: 10px;
+    }
+    
+    .preset-btn {
+        padding: 4px 8px;
+        font-size: 0.8rem;
+    }
+    
+    .category-header {
+        padding: 10px 15px;
+    }
+    
+    .indicators-grid {
+        padding: 10px 15px;
+    }
+    
+    .indicator-breakdown {
+        padding: 15px;
+        margin: 15px 0;
+    }
+    
+    .breakdown-category {
+        padding: 12px;
+    }
+    
+    .indicator-breakdown h4 {
+        font-size: 1rem;
+        margin-bottom: 15px;
     }
 }

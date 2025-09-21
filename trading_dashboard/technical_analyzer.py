@@ -1,4 +1,4 @@
-# technical_analyzer.py - Complete Technical Analysis Engine
+# technical_analyzer.py - Complete Enhanced Technical Analysis Engine with Fundamental Valuation
 import pandas as pd
 import numpy as np
 import yfinance as yf
@@ -16,24 +16,17 @@ class TechnicalAnalyzer:
         """
         self.symbol = symbol
         self.period = period or TRADING_CONFIG['DATA_PERIOD']
+        self.ticker = yf.Ticker(self.symbol)
         self.data = self.fetch_data(self.period)
+        self.info = self.fetch_company_info()
         
     def fetch_data(self, period):
         """Fetch stock data from Yahoo Finance with improved error handling"""
         try:
             print(f"Fetching data for {self.symbol} with period {period}")
-            ticker = yf.Ticker(self.symbol)
-            
-            # Try to get basic info first to validate symbol
-            try:
-                info = ticker.info
-                if not info or 'symbol' not in info:
-                    print(f"Symbol {self.symbol} may not be valid - no info available")
-            except Exception as info_error:
-                print(f"Warning: Could not fetch info for {self.symbol}: {info_error}")
             
             # Fetch historical data
-            data = ticker.history(period=period)
+            data = self.ticker.history(period=period)
             
             if data is None or data.empty:
                 print(f"No historical data returned for {self.symbol}")
@@ -54,27 +47,320 @@ class TechnicalAnalyzer:
                 print(f"Missing required columns for {self.symbol}: {missing_columns}")
                 return None
             
-            # Check for null values in recent data
-            recent_data = data.tail(10)
-            if recent_data[required_columns].isnull().any().any():
-                print(f"Warning: Recent data contains null values for {self.symbol}")
-            
             return data
             
         except Exception as e:
             print(f"Error fetching data for {self.symbol}: {e}")
-            
-            # Handle specific yfinance errors
-            error_str = str(e).lower()
-            if 'no data' in error_str or 'not found' in error_str:
-                print(f"Symbol {self.symbol} not found in Yahoo Finance")
-            elif 'connection' in error_str or 'timeout' in error_str:
-                print(f"Network connection issue while fetching {self.symbol}")
-            elif 'rate limit' in error_str:
-                print(f"Rate limited while fetching {self.symbol}")
-            
             return None
     
+    def fetch_company_info(self):
+        """Fetch company fundamental information"""
+        try:
+            info = self.ticker.info
+            print(f"Successfully fetched company info for {self.symbol}")
+            return info
+        except Exception as e:
+            print(f"Warning: Could not fetch company info for {self.symbol}: {e}")
+            return {}
+    
+    def calculate_fundamental_valuation(self):
+        """Calculate comprehensive fundamental valuation metrics"""
+        current_price = self.data['Close'].iloc[-1] if self.data is not None else 0
+        
+        # Initialize valuation metrics with defaults
+        valuation_metrics = {
+            'current_price': current_price,
+            'market_cap': None,
+            'pe_ratio': None,
+            'forward_pe': None,
+            'peg_ratio': None,
+            'price_to_book': None,
+            'price_to_sales': None,
+            'enterprise_value': None,
+            'ev_to_revenue': None,
+            'ev_to_ebitda': None,
+            'dividend_yield': None,
+            'return_on_equity': None,
+            'debt_to_equity': None,
+            'current_ratio': None,
+            'revenue_growth': None,
+            'earnings_growth': None,
+            'profit_margin': None,
+            'operating_margin': None,
+            'gross_margin': None,
+            'free_cash_flow': None,
+            'book_value_per_share': None,
+            'earnings_per_share': None,
+            'revenue_per_share': None,
+            'sector': None,
+            'industry': None,
+            'valuation_score': 0,
+            'valuation_category': 'Unknown',
+            'valuation_warnings': [],
+            'valuation_strengths': []
+        }
+        
+        if not self.info:
+            valuation_metrics['valuation_warnings'].append("No fundamental data available")
+            return valuation_metrics
+        
+        try:
+            # Basic company info
+            valuation_metrics['sector'] = self.info.get('sector', 'Unknown')
+            valuation_metrics['industry'] = self.info.get('industry', 'Unknown')
+            valuation_metrics['market_cap'] = self.info.get('marketCap')
+            
+            # Valuation ratios
+            valuation_metrics['pe_ratio'] = self.info.get('trailingPE')
+            valuation_metrics['forward_pe'] = self.info.get('forwardPE')
+            valuation_metrics['peg_ratio'] = self.info.get('pegRatio')
+            valuation_metrics['price_to_book'] = self.info.get('priceToBook')
+            valuation_metrics['price_to_sales'] = self.info.get('priceToSalesTrailing12Months')
+            valuation_metrics['enterprise_value'] = self.info.get('enterpriseValue')
+            valuation_metrics['ev_to_revenue'] = self.info.get('enterpriseToRevenue')
+            valuation_metrics['ev_to_ebitda'] = self.info.get('enterpriseToEbitda')
+            
+            # Income statement metrics
+            valuation_metrics['dividend_yield'] = self.info.get('dividendYield')
+            valuation_metrics['profit_margin'] = self.info.get('profitMargins')
+            valuation_metrics['operating_margin'] = self.info.get('operatingMargins')
+            valuation_metrics['gross_margin'] = self.info.get('grossMargins')
+            valuation_metrics['return_on_equity'] = self.info.get('returnOnEquity')
+            
+            # Balance sheet metrics
+            valuation_metrics['debt_to_equity'] = self.info.get('debtToEquity')
+            valuation_metrics['current_ratio'] = self.info.get('currentRatio')
+            valuation_metrics['book_value_per_share'] = self.info.get('bookValue')
+            
+            # Per share metrics
+            valuation_metrics['earnings_per_share'] = self.info.get('trailingEps')
+            valuation_metrics['revenue_per_share'] = self.info.get('revenuePerShare')
+            valuation_metrics['free_cash_flow'] = self.info.get('freeCashflow')
+            
+            # Growth metrics
+            valuation_metrics['revenue_growth'] = self.info.get('revenueGrowth')
+            valuation_metrics['earnings_growth'] = self.info.get('earningsGrowth')
+            
+            # Calculate valuation score and category
+            self._calculate_valuation_score(valuation_metrics)
+            
+        except Exception as e:
+            print(f"Error calculating fundamental valuation for {self.symbol}: {e}")
+            valuation_metrics['valuation_warnings'].append(f"Error processing fundamental data: {str(e)}")
+        
+        return valuation_metrics
+    
+    def _calculate_valuation_score(self, metrics):
+        """Calculate overall valuation score based on fundamental metrics with sector-aware thresholds"""
+        score = 0
+        warnings = []
+        strengths = []
+        
+        # Get sector for context-aware scoring
+        sector = metrics.get('sector', 'Unknown')
+        
+        # Sector-specific P/E thresholds
+        pe_thresholds = self._get_sector_pe_thresholds(sector)
+        
+        # P/E Ratio Analysis (Sector-Aware)
+        pe_ratio = metrics.get('pe_ratio')
+        if pe_ratio and pe_ratio > 0:
+            if pe_ratio < pe_thresholds['low']:
+                score += 3
+                strengths.append(f"Low P/E ratio ({pe_ratio:.1f}) for {sector}")
+            elif pe_ratio < pe_thresholds['fair']:
+                score += 1
+                strengths.append(f"Reasonable P/E ratio ({pe_ratio:.1f})")
+            elif pe_ratio > pe_thresholds['high']:
+                score -= 2
+                warnings.append(f"High P/E ratio ({pe_ratio:.1f}) even for {sector}")
+            elif pe_ratio > pe_thresholds['elevated']:
+                score -= 1
+                warnings.append(f"Elevated P/E ratio ({pe_ratio:.1f})")
+        elif pe_ratio and pe_ratio < 0:
+            score -= 2
+            warnings.append("Negative earnings (loss-making)")
+        
+        # PEG Ratio Analysis (More Lenient)
+        peg_ratio = metrics.get('peg_ratio')
+        if peg_ratio and peg_ratio > 0:
+            if peg_ratio < 0.8:
+                score += 3
+                strengths.append(f"Excellent PEG ratio ({peg_ratio:.2f})")
+            elif peg_ratio < 1.3:
+                score += 1
+                strengths.append(f"Good PEG ratio ({peg_ratio:.2f})")
+            elif peg_ratio > 3.0:
+                score -= 2
+                warnings.append(f"High PEG ratio ({peg_ratio:.2f})")
+        
+        # Price-to-Book Analysis (Sector-Aware)
+        pb_ratio = metrics.get('price_to_book')
+        if pb_ratio and pb_ratio > 0:
+            if sector in ['Technology', 'Software', 'Internet']:
+                # Tech companies naturally have higher P/B ratios
+                if pb_ratio < 3.0:
+                    score += 1
+                    strengths.append(f"Low P/B ratio ({pb_ratio:.2f}) for tech")
+                elif pb_ratio > 15.0:
+                    score -= 1
+                    warnings.append(f"Very high P/B ratio ({pb_ratio:.2f})")
+            else:
+                # Traditional industries
+                if pb_ratio < 1.5:
+                    score += 2
+                    strengths.append(f"Low P/B ratio ({pb_ratio:.2f})")
+                elif pb_ratio > 5.0:
+                    score -= 1
+                    warnings.append(f"High P/B ratio ({pb_ratio:.2f})")
+        
+        # Price-to-Sales Analysis (Sector-Aware)
+        ps_ratio = metrics.get('price_to_sales')
+        if ps_ratio and ps_ratio > 0:
+            ps_thresholds = self._get_sector_ps_thresholds(sector)
+            if ps_ratio < ps_thresholds['low']:
+                score += 1
+                strengths.append(f"Low P/S ratio ({ps_ratio:.2f})")
+            elif ps_ratio > ps_thresholds['high']:
+                score -= 1
+                warnings.append(f"High P/S ratio ({ps_ratio:.2f}) for {sector}")
+        
+        # Profitability Analysis (More Realistic)
+        profit_margin = metrics.get('profit_margin')
+        if profit_margin is not None:
+            if profit_margin > 0.25:  # 25%
+                score += 2
+                strengths.append(f"Excellent profit margin ({profit_margin*100:.1f}%)")
+            elif profit_margin > 0.15:  # 15%
+                score += 1
+                strengths.append(f"Good profit margin ({profit_margin*100:.1f}%)")
+            elif profit_margin > 0.05:  # 5%
+                # Neutral - no penalty for modest profitability
+                pass
+            elif profit_margin < 0:
+                score -= 2
+                warnings.append("Negative profit margin")
+        
+        # Return on Equity Analysis (More Realistic)
+        roe = metrics.get('return_on_equity')
+        if roe is not None:
+            if roe > 0.25:  # 25%
+                score += 2
+                strengths.append(f"Excellent ROE ({roe*100:.1f}%)")
+            elif roe > 0.15:  # 15%
+                score += 1
+                strengths.append(f"Good ROE ({roe*100:.1f}%)")
+            elif roe > 0.08:  # 8%
+                # Neutral - decent ROE, no bonus or penalty
+                pass
+            elif roe < 0:
+                score -= 1
+                warnings.append("Negative ROE")
+        
+        # Debt Analysis (More Nuanced)
+        debt_to_equity = metrics.get('debt_to_equity')
+        if debt_to_equity is not None:
+            if debt_to_equity < 25:  # Very low debt
+                score += 1
+                strengths.append("Very low debt levels")
+            elif debt_to_equity < 50:  # Reasonable debt
+                # Neutral - reasonable debt level
+                pass
+            elif debt_to_equity > 150:  # High debt
+                score -= 2
+                warnings.append("High debt levels")
+            elif debt_to_equity > 100:  # Elevated debt
+                score -= 1
+                warnings.append("Elevated debt levels")
+        
+        # Growth Analysis (More Realistic Thresholds)
+        revenue_growth = metrics.get('revenue_growth')
+        if revenue_growth is not None:
+            if revenue_growth > 0.25:  # 25%
+                score += 2
+                strengths.append(f"Strong revenue growth ({revenue_growth*100:.1f}%)")
+            elif revenue_growth > 0.10:  # 10%
+                score += 1
+                strengths.append(f"Good revenue growth ({revenue_growth*100:.1f}%)")
+            elif revenue_growth > 0.03:  # 3%
+                # Neutral - modest growth, no penalty
+                pass
+            elif revenue_growth < -0.05:  # -5%
+                score -= 2
+                warnings.append("Declining revenue")
+        
+        # Dividend Analysis (More Balanced)
+        dividend_yield = metrics.get('dividend_yield')
+        if dividend_yield and dividend_yield > 0:
+            if dividend_yield > 0.10:  # 10%
+                score -= 1
+                warnings.append(f"Very high dividend yield ({dividend_yield*100:.1f}%) - potential distress")
+            elif dividend_yield > 0.06:  # 6%
+                # Neutral - high but not necessarily bad
+                pass
+            elif dividend_yield > 0.02:  # 2%
+                score += 1
+                strengths.append(f"Reasonable dividend yield ({dividend_yield*100:.1f}%)")
+        
+        # Determine valuation category with more balanced thresholds
+        if score >= 6:
+            category = "Undervalued"
+        elif score >= 2:
+            category = "Fair Value"
+        elif score >= -2:
+            category = "Fairly Valued"
+        elif score >= -5:
+            category = "Overvalued"
+        else:
+            category = "Highly Overvalued"
+        
+        # Cap the score (more balanced range)
+        score = max(-8, min(8, score))
+        
+        metrics['valuation_score'] = score
+        metrics['valuation_category'] = category
+        metrics['valuation_warnings'] = warnings
+        metrics['valuation_strengths'] = strengths
+    
+    def _get_sector_pe_thresholds(self, sector):
+        """Get sector-appropriate P/E ratio thresholds"""
+        sector_thresholds = {
+            'Technology': {'low': 20, 'fair': 35, 'elevated': 50, 'high': 70},
+            'Software': {'low': 25, 'fair': 40, 'elevated': 60, 'high': 80},
+            'Internet': {'low': 20, 'fair': 35, 'elevated': 55, 'high': 75},
+            'Healthcare': {'low': 15, 'fair': 25, 'elevated': 35, 'high': 50},
+            'Financial Services': {'low': 8, 'fair': 15, 'elevated': 20, 'high': 25},
+            'Consumer Cyclical': {'low': 12, 'fair': 20, 'elevated': 30, 'high': 40},
+            'Consumer Defensive': {'low': 15, 'fair': 22, 'elevated': 30, 'high': 40},
+            'Industrials': {'low': 12, 'fair': 18, 'elevated': 25, 'high': 35},
+            'Energy': {'low': 8, 'fair': 15, 'elevated': 25, 'high': 40},
+            'Utilities': {'low': 12, 'fair': 18, 'elevated': 22, 'high': 28},
+            'Real Estate': {'low': 10, 'fair': 20, 'elevated': 30, 'high': 40},
+        }
+        
+        # Default thresholds for unknown sectors
+        return sector_thresholds.get(sector, {'low': 15, 'fair': 25, 'elevated': 35, 'high': 50})
+    
+    def _get_sector_ps_thresholds(self, sector):
+        """Get sector-appropriate Price-to-Sales thresholds"""
+        sector_thresholds = {
+            'Technology': {'low': 5, 'high': 15},
+            'Software': {'low': 8, 'high': 20},
+            'Internet': {'low': 5, 'high': 15},
+            'Healthcare': {'low': 3, 'high': 8},
+            'Financial Services': {'low': 2, 'high': 5},
+            'Consumer Cyclical': {'low': 1, 'high': 3},
+            'Consumer Defensive': {'low': 1, 'high': 4},
+            'Industrials': {'low': 1, 'high': 3},
+            'Energy': {'low': 1, 'high': 2},
+            'Utilities': {'low': 1, 'high': 3},
+            'Real Estate': {'low': 2, 'high': 6},
+        }
+        
+        # Default thresholds
+        return sector_thresholds.get(sector, {'low': 2, 'high': 8})
+
+
     def calculate_sma(self, window):
         """Calculate Simple Moving Average"""
         return self.data['Close'].rolling(window=window).mean()
@@ -108,40 +394,49 @@ class TechnicalAnalyzer:
         return macd_line, signal_line, histogram
     
     def calculate_adx(self, window=None):
-        """Calculate Average Directional Index (ADX)"""
+        """Calculate Average Directional Index (ADX) with proper Wilder's smoothing"""
         window = window or TRADING_CONFIG['ADX_PERIOD']
         high = self.data['High']
         low = self.data['Low']
         close = self.data['Close']
         
-        # True Range
+        # True Range calculation
         tr1 = high - low
         tr2 = abs(high - close.shift(1))
         tr3 = abs(low - close.shift(1))
         tr = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
         
-        # Directional Movement
+        # Directional Movement calculation
         plus_dm = high.diff()
         minus_dm = -low.diff()
         
+        # Set negative values to 0
         plus_dm[plus_dm < 0] = 0
         minus_dm[minus_dm < 0] = 0
         
+        # Only keep the larger of the two (directional movement rule)
         plus_dm[(plus_dm - minus_dm) < 0] = 0
         minus_dm[(minus_dm - plus_dm) < 0] = 0
         
-        # Smoothed calculations
-        tr_smooth = tr.rolling(window=window).mean()
-        plus_dm_smooth = plus_dm.rolling(window=window).mean()
-        minus_dm_smooth = minus_dm.rolling(window=window).mean()
+        # Wilder's smoothing function (exponential with alpha = 1/period)
+        def wilders_smoothing(series, period):
+            alpha = 1.0 / period
+            return series.ewm(alpha=alpha, adjust=False).mean()
         
-        # Directional Indicators
+        # Apply Wilder's smoothing (this is the key fix)
+        tr_smooth = wilders_smoothing(tr, window)
+        plus_dm_smooth = wilders_smoothing(plus_dm, window)
+        minus_dm_smooth = wilders_smoothing(minus_dm, window)
+        
+        # Calculate Directional Indicators
         plus_di = 100 * (plus_dm_smooth / tr_smooth)
         minus_di = 100 * (minus_dm_smooth / tr_smooth)
         
-        # ADX
+        # Calculate DX (Directional Index)
         dx = 100 * abs(plus_di - minus_di) / (plus_di + minus_di)
-        adx = dx.rolling(window=window).mean()
+        
+        # Apply Wilder's smoothing to DX to get ADX (this is also important)
+        adx = wilders_smoothing(dx, window)
         
         return adx, plus_di, minus_di
     
@@ -302,8 +597,7 @@ class TechnicalAnalyzer:
         return support_level, resistance_level
     
     def calculate_valuation_metrics(self):
-        """Calculate valuation-based metrics using price action"""
-        # Price relative to moving averages (valuation proxy)
+        """Calculate technical valuation-based metrics using price action"""
         sma_50 = self.calculate_sma(50)
         sma_100 = self.calculate_sma(100)
         sma_200 = self.calculate_sma(200)
@@ -336,6 +630,87 @@ class TechnicalAnalyzer:
             'low_52w': low_52w,
             'volatility_20d': volatility_20d
         }
+    
+    def calculate_enhanced_valuation_metrics(self):
+        """Enhanced valuation metrics with more balanced scoring"""
+        # Get fundamental valuation
+        fundamental_metrics = self.calculate_fundamental_valuation()
+        
+        # Get existing technical valuation metrics
+        technical_metrics = self.calculate_valuation_metrics()
+        
+        # Combine both approaches
+        enhanced_metrics = {
+            **fundamental_metrics,
+            **technical_metrics,
+            'combined_valuation_penalty': 0,
+            'valuation_analysis': {
+                'fundamental_score': fundamental_metrics.get('valuation_score', 0),
+                'technical_signals': [],
+                'overall_assessment': '',
+                'risk_factors': [],
+                'opportunities': []
+            }
+        }
+        
+        # Calculate combined valuation penalty for scoring system (More Balanced)
+        fundamental_score = fundamental_metrics.get('valuation_score', 0)
+        
+        # Convert fundamental score to penalty (more balanced)
+        if fundamental_score >= 4:  # Strong undervalued
+            penalty = 2  # Bonus for undervalued stocks
+        elif fundamental_score >= 1:  # Slight undervalued to fair
+            penalty = 1  # Small bonus
+        elif fundamental_score >= -1:  # Fairly valued
+            penalty = 0  # No penalty
+        elif fundamental_score >= -3:  # Moderately overvalued
+            penalty = -1  # Small penalty
+        elif fundamental_score >= -5:  # Overvalued
+            penalty = -2  # Moderate penalty
+        else:  # Highly overvalued
+            penalty = -3  # Significant penalty (reduced from -5)
+        
+        # Adjust penalty based on technical indicators (Keep existing logic but cap it)
+        distance_sma200 = technical_metrics.get('distance_from_sma200', 0)
+        position_52w = technical_metrics.get('position_52w', 50)
+        
+        # Technical overextension penalties (Reduced)
+        if distance_sma200 > 40:  # Very far from SMA 200
+            penalty -= 2
+            enhanced_metrics['valuation_analysis']['risk_factors'].append("Price very far above SMA 200")
+        elif distance_sma200 > 25:  # Far from SMA 200
+            penalty -= 1
+            
+        if position_52w > 95:  # Very near 52W highs
+            penalty -= 1
+            enhanced_metrics['valuation_analysis']['risk_factors'].append("At 52-week highs")
+        elif position_52w > 85:  # Near 52W highs
+            # No penalty - being near highs isn't necessarily bad
+            pass
+        
+        # Technical support opportunities
+        if position_52w < 15:  # Very near 52W lows
+            penalty += 1
+            enhanced_metrics['valuation_analysis']['opportunities'].append("Near 52-week lows - potential value")
+        elif position_52w < 30:  # In lower range
+            enhanced_metrics['valuation_analysis']['opportunities'].append("In lower price range")
+        
+        # Cap the combined penalty (more reasonable range)
+        enhanced_metrics['combined_valuation_penalty'] = max(-5, min(3, penalty))
+        
+        # Overall assessment
+        if penalty >= 1:
+            assessment = "Attractive valuation opportunity"
+        elif penalty >= 0:
+            assessment = "Fair to reasonable valuation"
+        elif penalty >= -2:
+            assessment = "Slightly overvalued but acceptable"
+        else:
+            assessment = "Overvalued - exercise caution"
+        
+        enhanced_metrics['valuation_analysis']['overall_assessment'] = assessment
+        
+        return enhanced_metrics
     
     def calculate_trend_strength(self):
         """Calculate overall trend strength"""
@@ -475,7 +850,7 @@ class TechnicalAnalyzer:
         """Calculate suggested entry points based on technical levels"""
         df = self.get_all_indicators()
         latest = df.iloc[-1]
-        valuation = self.calculate_valuation_metrics()
+        valuation = self.calculate_enhanced_valuation_metrics()
         
         entry_suggestions = {}
         
@@ -545,6 +920,9 @@ class TechnicalAnalyzer:
     
     def get_all_indicators(self):
         """Calculate all technical indicators"""
+        if self.data is None or self.data.empty:
+            return pd.DataFrame()
+            
         indicators = {}
         
         # Moving Averages
@@ -705,45 +1083,47 @@ class TechnicalAnalyzer:
         }
     
     def identify_entry_signals(self):
-        """Identify potential entry points based on comprehensive technical analysis"""
+        """Enhanced entry signals with improved valuation analysis"""
         df = self.get_all_indicators()
+        
+        if df is None or df.empty:
+            return None
         
         # Get the latest data point
         latest = df.iloc[-1]
         recent = df.tail(TRADING_CONFIG['RECENT_DAYS'])
         
-        # Calculate trend strength with score capping
+        # Calculate trend, momentum, and volume scores
         trend_score, trend_signals = self.calculate_trend_strength()
+        momentum_score, momentum_signals = self.calculate_momentum_strength()
+        volume_score, volume_signals = self.calculate_volume_strength()
+        
+        # Cap scores
         trend_score = min(trend_score, TRADING_CONFIG['MAX_TREND_SCORE'])
         trend_score = max(trend_score, -TRADING_CONFIG['MAX_TREND_SCORE'])
         
-        # Calculate momentum strength with score capping  
-        momentum_score, momentum_signals = self.calculate_momentum_strength()
         momentum_score = min(momentum_score, TRADING_CONFIG['MAX_MOMENTUM_SCORE'])
         momentum_score = max(momentum_score, -TRADING_CONFIG['MAX_MOMENTUM_SCORE'])
         
-        # Calculate volume strength with score capping
-        volume_score, volume_signals = self.calculate_volume_strength()
         volume_score = min(volume_score, TRADING_CONFIG['MAX_VOLUME_SCORE'])
-        volume_score = max(volume_score, 0)  # Volume score should not be negative
-        valuation = self.calculate_valuation_metrics()
+        volume_score = max(volume_score, 0)
         
-        # Base signal analysis with score capping
+        # Base signal analysis
         base_signals = []
         base_score = 0
         
-        # 1. MACD Analysis (More Strict)
+        # 1. MACD Analysis
         if (latest['MACD'] > latest['MACD_Signal'] and 
             recent['MACD'].iloc[-2] <= recent['MACD_Signal'].iloc[-2] and
             latest['MACD_Histogram'] > recent['MACD_Histogram'].iloc[-2]):
             base_signals.append("MACD Bullish Crossover")
             base_score += 3
         elif (latest['MACD'] > latest['MACD_Signal'] and 
-              latest['MACD_Histogram'] > 0):
+            latest['MACD_Histogram'] > 0):
             base_signals.append("MACD Above Signal")
             base_score += 1
         
-        # 2. RSI Analysis (More Conservative)
+        # 2. RSI Analysis
         if 25 <= latest['RSI'] <= 45:
             base_signals.append("RSI Oversold Recovery Zone")
             base_score += 3
@@ -774,7 +1154,7 @@ class TechnicalAnalyzer:
         
         base_score += ma_alignment_score
         
-        # 4. Advanced Volume Analysis
+        # 4. Volume Analysis
         if (latest['Volume'] > latest['Volume_SMA'] * 1.5 and 
             'OBV' in df.columns and 
             df['OBV'].tail(3).is_monotonic_increasing):
@@ -811,64 +1191,70 @@ class TechnicalAnalyzer:
                 base_signals.append("Near Channel Resistance")
                 base_score -= 2
         
-        # Cap base score at maximum allowed
+        # Cap base score
         base_score = min(base_score, TRADING_CONFIG['MAX_BASE_SCORE'])
-        base_score = max(base_score, -TRADING_CONFIG['MAX_BASE_SCORE'])  # Also cap negative scores
+        base_score = max(base_score, -TRADING_CONFIG['MAX_BASE_SCORE'])
         
-        # 8. Valuation-based penalties with strict capping
-        valuation_penalty = 0
-        valuation_signals = []
+        # Enhanced valuation analysis
+        enhanced_valuation = self.calculate_enhanced_valuation_metrics()
+        valuation_penalty = enhanced_valuation.get('combined_valuation_penalty', 0)
         
-        # Distance from SMA 200 penalty
-        if valuation['distance_from_sma200'] > 25:
-            valuation_penalty -= 3
-            valuation_signals.append(f"Far above SMA200 ({valuation['distance_from_sma200']:.1f}%)")
-        elif valuation['distance_from_sma200'] > 15:
-            valuation_penalty -= 2
-            valuation_signals.append(f"Extended above SMA200 ({valuation['distance_from_sma200']:.1f}%)")
-        
-        # 52-week position penalty
-        if valuation['position_52w'] > 90:
-            valuation_penalty -= 3
-            valuation_signals.append(f"Near 52W high ({valuation['position_52w']:.1f}%)")
-        elif valuation['position_52w'] > 80:
-            valuation_penalty -= 2
-            valuation_signals.append(f"High in 52W range ({valuation['position_52w']:.1f}%)")
-        
-        # Recent volatility check
-        if valuation['volatility_20d'] > 50:  # High volatility
-            valuation_penalty -= 1
-            valuation_signals.append(f"High volatility ({valuation['volatility_20d']:.1f}%)")
-        
-        # Cap valuation penalty at minimum allowed
+        # Cap valuation penalty
         valuation_penalty = max(valuation_penalty, TRADING_CONFIG['MIN_VALUATION_PENALTY'])
         
-        # Combine all scores with proper capping
+        # Combine all scores
         total_score = base_score + trend_score + momentum_score + volume_score + valuation_penalty
         
-        # Cap the score at maximum 20 points
+        # Cap the total score
         total_score = min(total_score, TRADING_CONFIG['MAX_SIGNAL_SCORE'])
-        
-        # Ensure minimum score is 0
         total_score = max(total_score, 0)
         
         # Combine all signals
-        all_signals = base_signals + trend_signals + momentum_signals + volume_signals + valuation_signals
+        all_signals = base_signals + trend_signals + momentum_signals + volume_signals
         
-        # Calculate entry price and all analysis
+        # Calculate entry price and trading plan
         entry_price = float(latest['Close'])
         trading_plan = None
         
-        # ALWAYS calculate entry analysis for all stocks (not just buy signals)
+        # Calculate entry analysis for all stocks
         entry_analysis = self.calculate_fair_value_entry_points(entry_price)
         
-        # Determine if this is a good entry point (use capped score)
+        # Determine if this is a good entry point
         is_good_entry = total_score >= TRADING_CONFIG['MIN_ENTRY_SCORE'] and valuation_penalty >= -3
         
-        # Only create detailed trading plan for actual BUY signals
+        # Create detailed trading plan for BUY signals
         if is_good_entry:
             trading_plan = self.calculate_stop_loss_exit_points(entry_price)
         
+        # Build technical data dictionary
+        technical_data = {
+            'RSI': float(latest['RSI']) if not pd.isna(latest['RSI']) else 0,
+            'MACD': float(latest['MACD']) if not pd.isna(latest['MACD']) else 0,
+            'MACD_Signal': float(latest['MACD_Signal']) if not pd.isna(latest['MACD_Signal']) else 0,
+            'ADX': float(latest['ADX']) if not pd.isna(latest['ADX']) else 0,
+            'SMA_200': float(latest['SMA_200']) if not pd.isna(latest['SMA_200']) else 0,
+            'EMA_50': float(latest['EMA_50']) if not pd.isna(latest['EMA_50']) else 0,
+            'BB_Position': float(((latest['Close'] - latest['BB_Lower']) / (latest['BB_Upper'] - latest['BB_Lower'])) * 100) if not pd.isna(latest['BB_Lower']) else 0,
+            'Volume_Ratio': float(latest['Volume'] / latest['Volume_SMA']) if not pd.isna(latest['Volume_SMA']) else 1,
+            'Williams_R': float(latest['Williams_R']) if 'Williams_R' in latest and not pd.isna(latest['Williams_R']) else 0,
+            'MFI': float(latest['MFI']) if 'MFI' in latest and not pd.isna(latest['MFI']) else 0,
+            'CCI': float(latest['CCI']) if 'CCI' in latest and not pd.isna(latest['CCI']) else 0,
+            'VWAP': float(latest['VWAP']) if 'VWAP' in latest and not pd.isna(latest['VWAP']) else 0,
+            'ROC': float(latest['ROC']) if 'ROC' in latest and not pd.isna(latest['ROC']) else 0,
+            'Position_52W': float(enhanced_valuation['position_52w']),
+            'Distance_SMA200': float(enhanced_valuation['distance_from_sma200']),
+            'Volatility_20D': float(enhanced_valuation['volatility_20d']),
+            'Stoch_K': float(latest['Stoch_K']) if 'Stoch_K' in latest and not pd.isna(latest['Stoch_K']) else 0,
+            'Stoch_D': float(latest['Stoch_D']) if 'Stoch_D' in latest and not pd.isna(latest['Stoch_D']) else 0,
+            'Plus_DI': float(latest['Plus_DI']) if 'Plus_DI' in latest and not pd.isna(latest['Plus_DI']) else 0,
+            'Minus_DI': float(latest['Minus_DI']) if 'Minus_DI' in latest and not pd.isna(latest['Minus_DI']) else 0
+        }
+        
+        # *** KEY FIX: Calculate indicator scores ***
+        indicator_scores = self.calculate_indicator_scores(technical_data)
+        print(f"DEBUG: Calculated indicator scores for {self.symbol}: {len(indicator_scores)} indicators")
+        
+        # *** SINGLE RETURN STATEMENT WITH ALL DATA ***
         return {
             'symbol': self.symbol,
             'date': df.index[-1].strftime('%Y-%m-%d'),
@@ -878,8 +1264,20 @@ class TechnicalAnalyzer:
             'signals': all_signals,
             'trading_plan': trading_plan,
             'entry_analysis': entry_analysis,
-            'valuation_metrics': valuation,
-            'recommendation_summary': self.generate_recommendation_summary(total_score, is_good_entry, valuation, latest, base_score, trend_score, momentum_score, volume_score, valuation_penalty),
+            'valuation_metrics': enhanced_valuation,
+            'fundamental_analysis': {
+                'pe_ratio': enhanced_valuation.get('pe_ratio'),
+                'valuation_category': enhanced_valuation.get('valuation_category'),
+                'valuation_score': enhanced_valuation.get('valuation_score'),
+                'sector': enhanced_valuation.get('sector'),
+                'industry': enhanced_valuation.get('industry'),
+                'strengths': enhanced_valuation.get('valuation_strengths', []),
+                'warnings': enhanced_valuation.get('valuation_warnings', [])
+            },
+            'recommendation_summary': self.generate_enhanced_recommendation_summary(
+                total_score, is_good_entry, enhanced_valuation, latest, 
+                base_score, trend_score, momentum_score, volume_score, valuation_penalty
+            ),
             'score_breakdown': {
                 'base_score': base_score,
                 'trend_score': trend_score,
@@ -888,81 +1286,41 @@ class TechnicalAnalyzer:
                 'valuation_penalty': valuation_penalty,
                 'total_score': total_score
             },
-            'technical_data': {
-                'RSI': float(latest['RSI']) if not pd.isna(latest['RSI']) else 0,
-                'MACD': float(latest['MACD']) if not pd.isna(latest['MACD']) else 0,
-                'MACD_Signal': float(latest['MACD_Signal']) if not pd.isna(latest['MACD_Signal']) else 0,
-                'ADX': float(latest['ADX']) if not pd.isna(latest['ADX']) else 0,
-                'SMA_200': float(latest['SMA_200']) if not pd.isna(latest['SMA_200']) else 0,
-                'EMA_50': float(latest['EMA_50']) if not pd.isna(latest['EMA_50']) else 0,
-                'BB_Position': float(((latest['Close'] - latest['BB_Lower']) / (latest['BB_Upper'] - latest['BB_Lower'])) * 100) if not pd.isna(latest['BB_Lower']) else 0,
-                'Volume_Ratio': float(latest['Volume'] / latest['Volume_SMA']) if not pd.isna(latest['Volume_SMA']) else 1,
-                'Williams_R': float(latest['Williams_R']) if 'Williams_R' in latest and not pd.isna(latest['Williams_R']) else 0,
-                'MFI': float(latest['MFI']) if 'MFI' in latest and not pd.isna(latest['MFI']) else 0,
-                'CCI': float(latest['CCI']) if 'CCI' in latest and not pd.isna(latest['CCI']) else 0,
-                'VWAP': float(latest['VWAP']) if 'VWAP' in latest and not pd.isna(latest['VWAP']) else 0,
-                'ROC': float(latest['ROC']) if 'ROC' in latest and not pd.isna(latest['ROC']) else 0,
-                'Position_52W': float(valuation['position_52w']),
-                'Distance_SMA200': float(valuation['distance_from_sma200']),
-                'Volatility_20D': float(valuation['volatility_20d'])
-            }
+            'technical_data': technical_data,
+            'indicator_scores': indicator_scores  # *** NOW INCLUDED! ***
         }
-    
-    def generate_recommendation_summary(self, total_score, is_good_entry, valuation, latest, base_score, trend_score, momentum_score, volume_score, valuation_penalty):
-        """Generate a brief summary explaining the recommendation"""
+
+    def generate_enhanced_recommendation_summary(self, total_score, is_good_entry, valuation_data, latest, 
+                                               base_score, trend_score, momentum_score, volume_score, valuation_penalty):
+        """Generate enhanced recommendation summary with fundamental insights"""
         
         if is_good_entry:
             return {
                 'type': 'BUY',
                 'title': 'Strong Entry Signal',
-                'summary': f'Score of {total_score}/20 indicates favorable technical conditions for entry.',
+                'summary': f'Score of {total_score}/20 with {valuation_data.get("valuation_category", "Unknown")} valuation indicates favorable conditions.',
                 'key_points': [
                     f'Technical score above {TRADING_CONFIG["MIN_ENTRY_SCORE"]} threshold',
-                    'Multiple bullish indicators aligned',
-                    'Risk/reward ratio supports entry'
-                ]
+                    f'Fundamental valuation: {valuation_data.get("valuation_category", "Unknown")}',
+                    'Multiple bullish indicators aligned'
+                ],
+                'valuation_insights': valuation_data.get('valuation_strengths', [])[:3]
             }
         
-        # For MONITOR signals (5-7 points)
-        elif total_score >= 5:
+        # For non-buy signals, include fundamental context
+        fundamental_category = valuation_data.get('valuation_category', 'Unknown')
+        
+        if total_score >= 5:
             key_issues = []
-            strengths = []
             
-            # Analyze what's holding it back
+            if valuation_penalty <= -3:
+                key_issues.append(f'Overvaluation concerns ({fundamental_category})')
             if base_score < 6:
-                key_issues.append('Weak base technical signals')
-            else:
-                strengths.append('Decent technical foundation')
-                
+                key_issues.append('Weak technical signals')
             if trend_score <= 1:
                 key_issues.append('Poor trend alignment')
-            elif trend_score >= 3:
-                strengths.append('Good trend structure')
                 
-            if momentum_score <= 2:
-                key_issues.append('Lacking momentum')
-            elif momentum_score >= 4:
-                strengths.append('Good momentum')
-                
-            if valuation_penalty <= -3:
-                key_issues.append('Overvaluation concerns')
-            elif valuation_penalty >= -1:
-                strengths.append('Fair valuation')
-            
-            # RSI specific issues
-            if latest['RSI'] > 75:
-                key_issues.append('RSI overbought (>75)')
-            elif latest['RSI'] < 25:
-                key_issues.append('RSI oversold (<25)')
-                
-            # Position in range
-            if valuation['position_52w'] > 85:
-                key_issues.append('Near 52-week highs')
-            
-            summary = f'Mixed signals with score of {total_score}/20. '
-            if len(strengths) > 0:
-                summary += f'Shows {", ".join(strengths[:2])} but '
-            summary += f'held back by {", ".join(key_issues[:2])}.'
+            summary = f'Mixed signals with {fundamental_category} valuation. Score: {total_score}/20.'
             
             return {
                 'type': 'MONITOR',
@@ -970,56 +1328,197 @@ class TechnicalAnalyzer:
                 'summary': summary,
                 'key_points': key_issues[:3],
                 'what_to_watch': [
-                    'Wait for score to reach 8+ for entry',
-                    'Monitor for trend improvement',
-                    'Watch for momentum pickup'
-                ]
+                    'Wait for technical score to reach 8+',
+                    'Monitor for valuation improvement',
+                    'Watch for trend confirmation'
+                ],
+                'valuation_insights': valuation_data.get('valuation_warnings', [])[:2]
             }
         
-        # For WAIT signals (0-4 points)  
         else:
             major_issues = []
             
-            # Identify major problems
+            if valuation_penalty <= -4:
+                major_issues.append(f'Significantly overvalued ({fundamental_category})')
             if base_score <= 2:
                 major_issues.append('Very weak technical signals')
             if trend_score <= 0:
                 major_issues.append('Poor trend direction')
-            if momentum_score <= 1:
-                major_issues.append('No momentum support')
-            if valuation_penalty <= -4:
-                major_issues.append('Significantly overvalued')
                 
-            # Specific technical issues
-            if latest['RSI'] > 80:
-                major_issues.append('Extremely overbought (RSI >80)')
-            elif latest['RSI'] < 20:
-                major_issues.append('Extremely oversold (RSI <20)')
-                
-            if valuation['distance_from_sma200'] > 30:
-                major_issues.append(f'{valuation["distance_from_sma200"]:.0f}% above SMA 200')
-                
-            if valuation['position_52w'] > 95:
-                major_issues.append('At 52-week highs')
-            elif valuation['position_52w'] < 5:
-                major_issues.append('Near 52-week lows')
-            
-            # MACD issues
-            if latest['MACD'] < latest['MACD_Signal'] and latest['MACD'] < 0:
-                major_issues.append('MACD bearish divergence')
-                
-            summary = f'Poor setup with score of {total_score}/20. '
-            summary += f'Multiple issues: {", ".join(major_issues[:3])}.'
-            
             return {
                 'type': 'WAIT',
-                'title': 'Poor Technical Setup',
-                'summary': summary,
+                'title': 'Poor Setup - Wait for Better Entry',
+                'summary': f'Poor technical setup with {fundamental_category} valuation. Score: {total_score}/20.',
                 'key_points': major_issues[:4],
                 'what_to_watch': [
                     'Wait for major technical improvement',
-                    'Look for oversold bounce opportunity',
-                    'Monitor for trend reversal signals',
+                    'Monitor for valuation correction',
                     'Consider alternative investments'
-                ]
+                ],
+                'valuation_insights': valuation_data.get('valuation_warnings', [])[:3]
             }
+
+    def calculate_indicator_scores(self, latest_data):
+            """Calculate individual indicator scores for color coding"""
+            scores = {}
+            
+            # RSI Scoring
+            rsi = latest_data.get('RSI', 50)
+            if rsi <= 30:
+                scores['RSI'] = {'value': rsi, 'score': 'bullish', 'signal': 'Oversold - Buy Signal'}
+            elif rsi <= 45:
+                scores['RSI'] = {'value': rsi, 'score': 'bullish', 'signal': 'Oversold Recovery'}
+            elif rsi <= 55:
+                scores['RSI'] = {'value': rsi, 'score': 'neutral', 'signal': 'Neutral Zone'}
+            elif rsi <= 70:
+                scores['RSI'] = {'value': rsi, 'score': 'neutral', 'signal': 'Bullish Territory'}
+            elif rsi <= 80:
+                scores['RSI'] = {'value': rsi, 'score': 'bearish', 'signal': 'Overbought Warning'}
+            else:
+                scores['RSI'] = {'value': rsi, 'score': 'bearish', 'signal': 'Extremely Overbought'}
+            
+            # MACD Scoring
+            macd = latest_data.get('MACD', 0)
+            macd_signal = latest_data.get('MACD_Signal', 0)
+            macd_hist = latest_data.get('MACD_Histogram', 0)
+            
+            if macd > macd_signal and macd_hist > 0:
+                scores['MACD'] = {'value': macd, 'score': 'bullish', 'signal': 'Bullish Momentum'}
+            elif macd > macd_signal:
+                scores['MACD'] = {'value': macd, 'score': 'neutral', 'signal': 'Above Signal Line'}
+            elif macd < macd_signal and macd_hist < 0:
+                scores['MACD'] = {'value': macd, 'score': 'bearish', 'signal': 'Bearish Momentum'}
+            else:
+                scores['MACD'] = {'value': macd, 'score': 'neutral', 'signal': 'Below Signal Line'}
+            
+            # ADX Scoring
+            adx = latest_data.get('ADX', 0)
+            plus_di = latest_data.get('Plus_DI', 0)
+            minus_di = latest_data.get('Minus_DI', 0)
+            
+            if adx > 25:
+                if plus_di > minus_di:
+                    scores['ADX'] = {'value': adx, 'score': 'bullish', 'signal': 'Strong Uptrend'}
+                else:
+                    scores['ADX'] = {'value': adx, 'score': 'bearish', 'signal': 'Strong Downtrend'}
+            elif adx > 20:
+                if plus_di > minus_di:
+                    scores['ADX'] = {'value': adx, 'score': 'neutral', 'signal': 'Moderate Uptrend'}
+                else:
+                    scores['ADX'] = {'value': adx, 'score': 'neutral', 'signal': 'Moderate Downtrend'}
+            else:
+                scores['ADX'] = {'value': adx, 'score': 'neutral', 'signal': 'Weak Trend'}
+            
+            # Williams %R Scoring
+            williams_r = latest_data.get('Williams_R', -50)
+            if williams_r >= -20:
+                scores['Williams_R'] = {'value': williams_r, 'score': 'bearish', 'signal': 'Overbought'}
+            elif williams_r >= -50:
+                scores['Williams_R'] = {'value': williams_r, 'score': 'neutral', 'signal': 'Neutral'}
+            elif williams_r >= -80:
+                scores['Williams_R'] = {'value': williams_r, 'score': 'bullish', 'signal': 'Oversold'}
+            else:
+                scores['Williams_R'] = {'value': williams_r, 'score': 'bullish', 'signal': 'Deeply Oversold'}
+            
+            # Money Flow Index Scoring
+            mfi = latest_data.get('MFI', 50)
+            if mfi <= 20:
+                scores['MFI'] = {'value': mfi, 'score': 'bullish', 'signal': 'Oversold'}
+            elif mfi <= 40:
+                scores['MFI'] = {'value': mfi, 'score': 'bullish', 'signal': 'Oversold Recovery'}
+            elif mfi <= 60:
+                scores['MFI'] = {'value': mfi, 'score': 'neutral', 'signal': 'Neutral'}
+            elif mfi <= 80:
+                scores['MFI'] = {'value': mfi, 'score': 'neutral', 'signal': 'Bullish Territory'}
+            else:
+                scores['MFI'] = {'value': mfi, 'score': 'bearish', 'signal': 'Overbought'}
+            
+            # Bollinger Bands Position Scoring
+            bb_position = latest_data.get('BB_Position', 50)
+            if bb_position <= 10:
+                scores['BB_Position'] = {'value': bb_position, 'score': 'bullish', 'signal': 'Near Lower Band'}
+            elif bb_position <= 30:
+                scores['BB_Position'] = {'value': bb_position, 'score': 'bullish', 'signal': 'Lower Third'}
+            elif bb_position <= 70:
+                scores['BB_Position'] = {'value': bb_position, 'score': 'neutral', 'signal': 'Middle Range'}
+            elif bb_position <= 90:
+                scores['BB_Position'] = {'value': bb_position, 'score': 'bearish', 'signal': 'Upper Third'}
+            else:
+                scores['BB_Position'] = {'value': bb_position, 'score': 'bearish', 'signal': 'Near Upper Band'}
+            
+            # Volume Ratio Scoring
+            volume_ratio = latest_data.get('Volume_Ratio', 1.0)
+            if volume_ratio >= 2.0:
+                scores['Volume_Ratio'] = {'value': volume_ratio, 'score': 'bullish', 'signal': 'Very High Volume'}
+            elif volume_ratio >= 1.5:
+                scores['Volume_Ratio'] = {'value': volume_ratio, 'score': 'bullish', 'signal': 'High Volume'}
+            elif volume_ratio >= 1.0:
+                scores['Volume_Ratio'] = {'value': volume_ratio, 'score': 'neutral', 'signal': 'Above Average'}
+            elif volume_ratio >= 0.7:
+                scores['Volume_Ratio'] = {'value': volume_ratio, 'score': 'neutral', 'signal': 'Below Average'}
+            else:
+                scores['Volume_Ratio'] = {'value': volume_ratio, 'score': 'bearish', 'signal': 'Low Volume'}
+            
+            # Moving Average Position Scoring
+            sma_200_distance = latest_data.get('Distance_SMA200', 0)
+            if sma_200_distance >= 10:
+                scores['SMA_200_Position'] = {'value': sma_200_distance, 'score': 'bullish', 'signal': 'Well Above SMA200'}
+            elif sma_200_distance >= 0:
+                scores['SMA_200_Position'] = {'value': sma_200_distance, 'score': 'bullish', 'signal': 'Above SMA200'}
+            elif sma_200_distance >= -5:
+                scores['SMA_200_Position'] = {'value': sma_200_distance, 'score': 'neutral', 'signal': 'Near SMA200'}
+            else:
+                scores['SMA_200_Position'] = {'value': sma_200_distance, 'score': 'bearish', 'signal': 'Below SMA200'}
+            
+            # 52-Week Position Scoring
+            position_52w = latest_data.get('Position_52W', 50)
+            if position_52w >= 90:
+                scores['Position_52W'] = {'value': position_52w, 'score': 'bearish', 'signal': 'Near 52W High'}
+            elif position_52w >= 70:
+                scores['Position_52W'] = {'value': position_52w, 'score': 'neutral', 'signal': 'Upper Range'}
+            elif position_52w >= 30:
+                scores['Position_52W'] = {'value': position_52w, 'score': 'neutral', 'signal': 'Middle Range'}
+            elif position_52w >= 10:
+                scores['Position_52W'] = {'value': position_52w, 'score': 'bullish', 'signal': 'Lower Range'}
+            else:
+                scores['Position_52W'] = {'value': position_52w, 'score': 'bullish', 'signal': 'Near 52W Low'}
+            
+            # Stochastic Scoring
+            if 'Stoch_K' in latest_data and 'Stoch_D' in latest_data:
+                stoch_k = latest_data['Stoch_K']
+                stoch_d = latest_data['Stoch_D']
+                
+                if stoch_k <= 20 and stoch_d <= 20:
+                    scores['Stochastic'] = {'value': f"{stoch_k:.1f}/{stoch_d:.1f}", 'score': 'bullish', 'signal': 'Oversold'}
+                elif stoch_k >= 80 and stoch_d >= 80:
+                    scores['Stochastic'] = {'value': f"{stoch_k:.1f}/{stoch_d:.1f}", 'score': 'bearish', 'signal': 'Overbought'}
+                elif stoch_k > stoch_d:
+                    scores['Stochastic'] = {'value': f"{stoch_k:.1f}/{stoch_d:.1f}", 'score': 'bullish', 'signal': 'Bullish Cross'}
+                else:
+                    scores['Stochastic'] = {'value': f"{stoch_k:.1f}/{stoch_d:.1f}", 'score': 'neutral', 'signal': 'Neutral'}
+            
+            # CCI Scoring
+            if 'CCI' in latest_data:
+                cci = latest_data['CCI']
+                if cci >= 100:
+                    scores['CCI'] = {'value': cci, 'score': 'bearish', 'signal': 'Overbought'}
+                elif cci <= -100:
+                    scores['CCI'] = {'value': cci, 'score': 'bullish', 'signal': 'Oversold'}
+                elif cci > 0:
+                    scores['CCI'] = {'value': cci, 'score': 'bullish', 'signal': 'Bullish'}
+                else:
+                    scores['CCI'] = {'value': cci, 'score': 'bearish', 'signal': 'Bearish'}
+            
+            # ROC Scoring
+            if 'ROC' in latest_data:
+                roc = latest_data['ROC']
+                if roc >= 5:
+                    scores['ROC'] = {'value': roc, 'score': 'bullish', 'signal': 'Strong Momentum'}
+                elif roc >= 0:
+                    scores['ROC'] = {'value': roc, 'score': 'bullish', 'signal': 'Positive Momentum'}
+                elif roc >= -5:
+                    scores['ROC'] = {'value': roc, 'score': 'bearish', 'signal': 'Negative Momentum'}
+                else:
+                    scores['ROC'] = {'value': roc, 'score': 'bearish', 'signal': 'Weak Momentum'}
+            
+            return scores
